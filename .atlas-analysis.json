@@ -1,0 +1,181 @@
+{
+  "projectType": "api-service",
+  "projectName": "AnimeThemes Server",
+  "projectDescription": "Resource management and API for AnimeThemes.moe anime opening and ending themes database",
+  "theme": "mint",
+  "primaryColor": "#7C3AED",
+  "lightColor": "#A78BFA",
+  "darkColor": "#6D28D9",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/database-structure",
+              "concepts/resource-types",
+              "concepts/media-streaming"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "auth/overview",
+              "auth/sanctum",
+              "auth/permissions"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "REST API",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction",
+              "api/pagination",
+              "api/filtering",
+              "api/rate-limits"
+            ]
+          },
+          {
+            "group": "Wiki Resources",
+            "pages": [
+              "api/wiki/anime",
+              "api/wiki/themes",
+              "api/wiki/artists",
+              "api/wiki/songs",
+              "api/wiki/videos",
+              "api/wiki/audio",
+              "api/wiki/images",
+              "api/wiki/series",
+              "api/wiki/studios"
+            ]
+          },
+          {
+            "group": "Playlists",
+            "pages": [
+              "api/playlists/overview",
+              "api/playlists/tracks",
+              "api/playlists/management"
+            ]
+          },
+          {
+            "group": "User Resources",
+            "pages": [
+              "api/users/profiles",
+              "api/users/external-profiles"
+            ]
+          },
+          {
+            "group": "Admin",
+            "pages": [
+              "api/admin/announcements",
+              "api/admin/features",
+              "api/admin/dumps"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "GraphQL API",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "graphql/introduction",
+              "graphql/queries",
+              "graphql/filtering",
+              "graphql/sorting",
+              "graphql/pagination"
+            ]
+          },
+          {
+            "group": "Schema",
+            "pages": [
+              "graphql/schema/types",
+              "graphql/schema/anime",
+              "graphql/schema/artists",
+              "graphql/schema/songs",
+              "graphql/schema/videos"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Advanced",
+        "groups": [
+          {
+            "group": "Configuration",
+            "pages": [
+              "advanced/environment",
+              "advanced/feature-flags",
+              "advanced/storage",
+              "advanced/elasticsearch"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "advanced/admin-panel",
+              "advanced/commands",
+              "advanced/database-dumps"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "advanced/contributing",
+              "advanced/testing",
+              "advanced/architecture"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "RESTful API for anime themes, videos, and audio",
+    "GraphQL API with advanced filtering and sorting",
+    "Media streaming (audio and video) with multiple methods",
+    "User playlists and external profile integration",
+    "Filament admin panel for resource management",
+    "Elasticsearch integration for advanced search",
+    "Database dumps and backups",
+    "Role-based permissions with Spatie Permission"
+  ],
+  "publicApiSurface": [
+    "GET /api/anime",
+    "GET /api/anime/{anime}",
+    "GET /api/animetheme",
+    "GET /api/animetheme/{animetheme}",
+    "GET /api/artist",
+    "GET /api/artist/{artist}",
+    "GET /api/song",
+    "GET /api/song/{song}",
+    "GET /api/video",
+    "GET /api/video/{video}",
+    "GET /api/audio",
+    "GET /api/audio/{audio}",
+    "GET /api/image",
+    "GET /api/series",
+    "GET /api/studio",
+    "GET /api/playlist",
+    "POST /api/playlist",
+    "GET /api/search",
+    "POST /graphql",
+    "GET /audio/{basename}",
+    "GET /video/{basename}"
+  ]
+}
