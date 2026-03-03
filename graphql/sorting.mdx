@@ -1,0 +1,340 @@
+---
+title: Sorting Results
+description: Learn how to sort GraphQL query results
+---
+
+The AnimeThemes GraphQL API allows you to sort query results using the `sort` argument on pagination queries.
+
+## Basic Sorting
+
+Sort results using the `sort` argument with a field and direction.
+
+### Sort by Year (Ascending)
+
+```graphql
+query {
+  animePagination(
+    first: 10,
+    sort: [{ field: YEAR, order: ASC }]
+  ) {
+    data {
+      name
+      year
+    }
+  }
+}
+```
+
+### Sort by Year (Descending)
+
+```graphql
+query {
+  animePagination(
+    first: 10,
+    sort: [{ field: YEAR, order: DESC }]
+  ) {
+    data {
+      name
+      year
+    }
+  }
+}
+```
+
+## Sort Directions
+
+Two sort directions are available:
+
+| Direction | Description |
+|-----------|-------------|
+| `ASC` | Ascending order (A-Z, 0-9, oldest to newest) |
+| `DESC` | Descending order (Z-A, 9-0, newest to oldest) |
+
+## Multiple Sort Fields
+
+You can sort by multiple fields. Results are sorted by the first field, then by the second field for rows with matching values, and so on.
+
+```graphql
+query {
+  animePagination(
+    first: 20,
+    sort: [
+      { field: YEAR, order: DESC },
+      { field: SEASON, order: ASC },
+      { field: NAME, order: ASC }
+    ]
+  ) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+This query sorts anime by year (newest first), then by season within each year, then alphabetically by name.
+
+## Sortable Fields
+
+Each resource type has specific sortable fields. Use the GraphiQL sandbox to explore available fields.
+
+### Common Sortable Fields
+
+**Anime:**
+- `ID`
+- `NAME`
+- `SLUG`
+- `YEAR`
+- `SEASON`
+- `MEDIA_FORMAT`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+**Artist:**
+- `ID`
+- `NAME`
+- `SLUG`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+**Video:**
+- `ID`
+- `BASENAME`
+- `FILENAME`
+- `RESOLUTION`
+- `NC`
+- `SUBBED`
+- `LYRICS`
+- `UNCEN`
+- `SOURCE`
+- `OVERLAP`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+**Theme:**
+- `ID`
+- `TYPE`
+- `SEQUENCE`
+- `GROUP`
+- `SLUG`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+## Combining Sort with Filters
+
+Sorting works seamlessly with filtering:
+
+```graphql
+query {
+  animePagination(
+    first: 10,
+    where: [
+      { field: YEAR, operator: GTE, value: 2020 }
+    ],
+    sort: [{ field: YEAR, order: DESC }]
+  ) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+## Sorting Relations
+
+You can also sort nested relations:
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    name
+    themes(sort: [{ field: SEQUENCE, order: ASC }]) {
+      id
+      type
+      sequence
+      slug
+    }
+  }
+}
+```
+
+## Random Sorting
+
+Some resources support random sorting for shuffled results. This is useful for features like "random theme" or "shuffle playlist".
+
+```graphql
+query {
+  animePagination(
+    first: 5,
+    sort: [{ field: RANDOM }]
+  ) {
+    data {
+      name
+      year
+    }
+  }
+}
+```
+
+<Note>
+  Random sorting may have performance implications on large datasets. Use it with appropriate pagination limits.
+</Note>
+
+## Pivot Table Sorting
+
+When querying many-to-many relationships, you can sort by fields on the pivot table:
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    name
+    studios(sort: [{ field: PIVOT_CREATED_AT, order: DESC }]) {
+      name
+    }
+  }
+}
+```
+
+## Practical Examples
+
+### Latest Anime First
+
+```graphql
+query {
+  animePagination(
+    first: 20,
+    sort: [
+      { field: YEAR, order: DESC },
+      { field: CREATED_AT, order: DESC }
+    ]
+  ) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+### Alphabetical Listing
+
+```graphql
+query {
+  animePagination(
+    first: 50,
+    sort: [{ field: NAME, order: ASC }]
+  ) {
+    data {
+      name
+      slug
+    }
+  }
+}
+```
+
+### Themes by Type and Sequence
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    name
+    themes(sort: [
+      { field: TYPE, order: ASC },
+      { field: SEQUENCE, order: ASC }
+    ]) {
+      type
+      sequence
+      slug
+      song {
+        title
+      }
+    }
+  }
+}
+```
+
+This sorts themes with OPs first, then EDs, each in sequence order.
+
+### Recent Videos by Resolution
+
+```graphql
+query {
+  videoPagination(
+    first: 20,
+    sort: [
+      { field: CREATED_AT, order: DESC },
+      { field: RESOLUTION, order: DESC }
+    ]
+  ) {
+    data {
+      basename
+      filename
+      resolution
+      created_at
+    }
+  }
+}
+```
+
+## Sort with Pagination
+
+Sorting is particularly useful with pagination to ensure consistent ordering across pages:
+
+```graphql
+query {
+  animePagination(
+    first: 25,
+    page: 2,
+    sort: [{ field: NAME, order: ASC }]
+  ) {
+    data {
+      name
+      slug
+    }
+    paginationInfo {
+      currentPage
+      lastPage
+      total
+    }
+  }
+}
+```
+
+<Warning>
+  Without explicit sorting, the order of results may be inconsistent across pagination pages. Always use `sort` when paginating.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Sort When Paginating">
+    Specify a sort order when using pagination to ensure consistent results across pages.
+  </Accordion>
+  
+  <Accordion title="Sort by Indexed Fields First">
+    For better performance, use indexed fields like `ID`, `CREATED_AT`, or `YEAR` as the primary sort field.
+  </Accordion>
+  
+  <Accordion title="Use Stable Sort Fields">
+    Include a unique field like `ID` as the last sort criterion to ensure stable, deterministic ordering.
+  </Accordion>
+  
+  <Accordion title="Consider Performance">
+    Sorting large datasets can be expensive. Combine with filters to reduce the dataset before sorting.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Pagination" icon="list" href="/graphql/pagination">
+    Learn how to paginate sorted results
+  </Card>
+  <Card title="Filtering" icon="filter" href="/graphql/filtering">
+    Filter data before sorting
+  </Card>
+</CardGroup>

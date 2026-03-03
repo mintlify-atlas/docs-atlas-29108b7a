@@ -1,0 +1,457 @@
+---
+title: Pagination in GraphQL
+description: Learn how to paginate through query results efficiently
+---
+
+The AnimeThemes GraphQL API provides pagination to handle large datasets efficiently. Pagination is available on all pagination queries.
+
+## Pagination Arguments
+
+Pagination queries accept two main arguments:
+
+| Argument | Type | Description | Default |
+|----------|------|-------------|----------|
+| `first` | Int | Number of items to return per page | 15 |
+| `page` | Int | Page number to retrieve | 1 |
+
+## Basic Pagination
+
+### First Page
+
+```graphql
+query {
+  animePagination(first: 10, page: 1) {
+    data {
+      id
+      name
+      slug
+    }
+    paginationInfo {
+      total
+      count
+      currentPage
+      lastPage
+    }
+  }
+}
+```
+
+### Second Page
+
+```graphql
+query {
+  animePagination(first: 10, page: 2) {
+    data {
+      id
+      name
+      slug
+    }
+    paginationInfo {
+      total
+      count
+      currentPage
+      lastPage
+    }
+  }
+}
+```
+
+## Pagination Info
+
+Every paginated response includes a `paginationInfo` object with metadata about the pagination state.
+
+### Available Fields
+
+```graphql
+paginationInfo {
+  count          # Number of items in the current page
+  total          # Total number of items matching the query
+  perPage        # Number of items per page (same as `first`)
+  currentPage    # Current page number
+  from           # Index of the first item on this page
+  to             # Index of the last item on this page
+  lastPage       # Total number of pages
+  hasMorePages   # Whether there are more pages after this one
+}
+```
+
+### Complete Example
+
+```graphql
+query {
+  animePagination(first: 25, page: 1) {
+    data {
+      name
+      year
+    }
+    paginationInfo {
+      count
+      total
+      perPage
+      currentPage
+      from
+      to
+      lastPage
+      hasMorePages
+    }
+  }
+}
+```
+
+**Example Response:**
+
+```json
+{
+  "data": {
+    "animePagination": {
+      "data": [
+        { "name": "Bakemonogatari", "year": 2009 },
+        // ... 24 more items
+      ],
+      "paginationInfo": {
+        "count": 25,
+        "total": 1250,
+        "perPage": 25,
+        "currentPage": 1,
+        "from": 1,
+        "to": 25,
+        "lastPage": 50,
+        "hasMorePages": true
+      }
+    }
+  }
+}
+```
+
+## Pagination Limits
+
+The API enforces pagination limits to prevent abuse:
+
+- **Default page size**: 15 items
+- **Maximum page size**: 100 items for regular queries
+- **Relation page size**: Unlimited by default (1,000,000 max)
+
+<Note>
+  The maximum page size for top-level pagination queries is 100. Requesting more than 100 items will be capped at 100.
+</Note>
+
+## Paginating Relations
+
+Relations can also be paginated:
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    name
+    themes(first: 5, page: 1) {
+      data {
+        id
+        type
+        sequence
+      }
+      paginationInfo {
+        total
+        count
+        hasMorePages
+      }
+    }
+  }
+}
+```
+
+<Info>
+  Relations have a much higher default limit (1,000,000) since they're typically smaller datasets. You can paginate them if needed for very large relations.
+</Info>
+
+## Pagination with Filtering and Sorting
+
+Combine pagination with filters and sorting for powerful queries:
+
+```graphql
+query {
+  animePagination(
+    first: 20,
+    page: 1,
+    where: [
+      { field: YEAR, operator: GTE, value: 2020 }
+    ],
+    sort: [{ field: YEAR, order: DESC }]
+  ) {
+    data {
+      name
+      year
+      season
+    }
+    paginationInfo {
+      total
+      currentPage
+      lastPage
+      hasMorePages
+    }
+  }
+}
+```
+
+## Implementing Pagination in Your App
+
+### Client-Side Pagination
+
+```javascript
+const PAGE_SIZE = 25;
+
+function fetchAnimePage(pageNumber) {
+  const query = `
+    query GetAnimePage($first: Int!, $page: Int!) {
+      animePagination(first: $first, page: $page) {
+        data {
+          id
+          name
+          slug
+          year
+        }
+        paginationInfo {
+          currentPage
+          lastPage
+          total
+          hasMorePages
+        }
+      }
+    }
+  `;
+  
+  return fetch('/graphql', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query,
+      variables: {
+        first: PAGE_SIZE,
+        page: pageNumber
+      }
+    })
+  })
+  .then(res => res.json());
+}
+```
+
+### Infinite Scroll
+
+```javascript
+let currentPage = 1;
+let hasMore = true;
+let allAnime = [];
+
+async function loadMoreAnime() {
+  if (!hasMore) return;
+  
+  const response = await fetchAnimePage(currentPage);
+  const { data, paginationInfo } = response.data.animePagination;
+  
+  allAnime = [...allAnime, ...data];
+  hasMore = paginationInfo.hasMorePages;
+  currentPage++;
+  
+  return data;
+}
+```
+
+### React Pagination Component
+
+```jsx
+import { useState, useEffect } from 'react';
+
+function AnimePagination() {
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    fetchAnimePage(page).then(response => {
+      setData(response.data.animePagination);
+    });
+  }, [page]);
+  
+  if (!data) return <div>Loading...</div>;
+  
+  const { data: anime, paginationInfo } = data;
+  
+  return (
+    <div>
+      <ul>
+        {anime.map(item => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+      
+      <div className="pagination">
+        <button 
+          onClick={() => setPage(p => p - 1)} 
+          disabled={page === 1}
+        >
+          Previous
+        </button>
+        
+        <span>
+          Page {paginationInfo.currentPage} of {paginationInfo.lastPage}
+        </span>
+        
+        <button 
+          onClick={() => setPage(p => p + 1)} 
+          disabled={!paginationInfo.hasMorePages}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+## Using Variables for Pagination
+
+Use GraphQL variables to make pagination queries reusable:
+
+```graphql
+query GetAnimeList($first: Int!, $page: Int!, $year: Int) {
+  animePagination(
+    first: $first,
+    page: $page,
+    where: [
+      { field: YEAR, value: $year }
+    ],
+    sort: [{ field: NAME, order: ASC }]
+  ) {
+    data {
+      id
+      name
+      year
+    }
+    paginationInfo {
+      currentPage
+      lastPage
+      total
+      hasMorePages
+    }
+  }
+}
+```
+
+**Variables:**
+
+```json
+{
+  "first": 25,
+  "page": 1,
+  "year": 2023
+}
+```
+
+## Practical Examples
+
+### Browse All Anime
+
+```graphql
+query {
+  animePagination(
+    first: 50,
+    page: 1,
+    sort: [{ field: NAME, order: ASC }]
+  ) {
+    data {
+      id
+      name
+      slug
+    }
+    paginationInfo {
+      currentPage
+      lastPage
+      total
+    }
+  }
+}
+```
+
+### Latest Additions
+
+```graphql
+query {
+  animePagination(
+    first: 20,
+    page: 1,
+    sort: [{ field: CREATED_AT, order: DESC }]
+  ) {
+    data {
+      name
+      year
+      created_at
+    }
+    paginationInfo {
+      count
+      hasMorePages
+    }
+  }
+}
+```
+
+### Filtered and Paginated
+
+```graphql
+query {
+  animePagination(
+    first: 30,
+    page: 1,
+    where: [
+      { field: YEAR, value: 2024 },
+      { field: SEASON, value: "WINTER" }
+    ],
+    sort: [{ field: NAME, order: ASC }]
+  ) {
+    data {
+      name
+      slug
+    }
+    paginationInfo {
+      total
+      lastPage
+    }
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Request Appropriate Page Sizes">
+    Choose a page size that balances between fewer requests and reasonable response sizes. 25-50 items is often optimal.
+  </Accordion>
+  
+  <Accordion title="Always Use paginationInfo">
+    Include `paginationInfo` in your queries to implement proper pagination controls and handle edge cases.
+  </Accordion>
+  
+  <Accordion title="Check hasMorePages">
+    Use `hasMorePages` to determine if a "Next" button should be enabled or if more items should be loaded.
+  </Accordion>
+  
+  <Accordion title="Combine with Sorting">
+    Always specify a sort order when paginating to ensure consistent results across pages.
+  </Accordion>
+  
+  <Accordion title="Handle Empty Results">
+    Check if `count` is 0 or `data` is empty to handle cases where no results are found.
+  </Accordion>
+  
+  <Accordion title="Don't Fetch Excessive Data">
+    Avoid requesting the maximum page size unless necessary. Smaller pages load faster and use less bandwidth.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Filtering" icon="filter" href="/graphql/filtering">
+    Filter paginated results
+  </Card>
+  <Card title="Sorting" icon="arrow-down-a-z" href="/graphql/sorting">
+    Sort paginated data
+  </Card>
+</CardGroup>

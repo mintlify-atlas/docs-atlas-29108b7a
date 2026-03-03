@@ -1,0 +1,120 @@
+---
+title: Authentication Overview
+description: Learn about authentication methods and API access in AnimeThemes Server
+---
+
+AnimeThemes Server provides a comprehensive authentication system using Laravel Sanctum for API token authentication and Laravel Fortify for user management.
+
+## Authentication Methods
+
+The server supports multiple authentication approaches:
+
+### 1. Sanctum Token Authentication
+
+API token authentication using Laravel Sanctum for stateless API requests. This is the primary method for programmatic API access.
+
+- **Token-based**: Personal access tokens for API authentication
+- **Stateless**: No session required for API requests
+- **Long-lived**: Tokens expire after 1 year by default
+- **Secure**: Bearer token authentication via Authorization header
+
+### 2. Session Authentication
+
+Cookie-based session authentication for first-party applications.
+
+- **Stateful domains**: Configured via `SANCTUM_STATEFUL_DOMAINS`
+- **CSRF protection**: Required for stateful requests
+- **Session cookies**: Encrypted cookies for authenticated sessions
+
+## Authentication Flow
+
+### Obtaining API Tokens
+
+Currently, API tokens must be generated through the Filament admin panel:
+
+1. **Register an account** using Laravel Fortify endpoints
+2. **Verify your email** to activate your account
+3. **Access Filament panel** at `/admin` (requires appropriate permissions)
+4. **Generate personal access token** in your profile settings
+5. **Use the token** in API requests via Authorization header
+
+### Using API Tokens
+
+Once you have a personal access token, include it in your API requests:
+
+```bash
+curl https://api.animethemes.moe/anime \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+```javascript
+fetch('https://api.animethemes.moe/anime', {
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN_HERE'
+  }
+})
+```
+
+### Protected Endpoints
+
+Certain endpoints require authentication:
+
+- `/api/me` - Get current user information
+- `/api/me/playlist` - Manage user playlists
+- `/api/me/externalprofile` - Manage external profiles
+- `/api/me/notification` - User notifications
+
+Most read-only endpoints (viewing anime, artists, songs, etc.) do not require authentication.
+
+## User Registration
+
+New users can register through Laravel Fortify with the following requirements:
+
+### Validation Rules
+
+Defined in `CreateNewUser` action (app/Actions/Fortify/CreateNewUser.php:28):
+
+- **Name**: Required, alphanumeric with dashes/underscores, max 35 characters, must be unique, passes moderation filters
+- **Email**: Required, valid email format, max 255 characters, must be disposable-free and unique
+- **Password**: Must meet Laravel's password requirements
+- **Terms**: Must accept terms of service
+
+### Rate Limiting
+
+Configured in `FortifyServiceProvider` (app/Providers/FortifyServiceProvider.php:26):
+
+- **Login attempts**: 5 attempts per minute per IP address
+- **Two-factor authentication**: 5 attempts per minute per session
+
+## Security Features
+
+### Two-Factor Authentication
+
+Optional 2FA support via Laravel Fortify:
+
+- TOTP-based (Time-based One-Time Password)
+- Recovery codes for account recovery
+- Confirmation required before enabling
+
+### Email Verification
+
+Users must verify their email addresses:
+
+- Required to access Filament admin panel
+- Implements `MustVerifyEmail` interface
+- Verification status stored in `email_verified_at` column
+
+### Token Expiration
+
+Configured in `config/sanctum.php` (config/sanctum.php:52):
+
+```php
+'expiration' => CarbonInterval::year()->totalMinutes,
+```
+
+Tokens are valid for 1 year from creation.
+
+## Next Steps
+
+- [Laravel Sanctum](/auth/sanctum) - Detailed token authentication guide
+- [Permissions](/auth/permissions) - Role-based access control system

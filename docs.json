@@ -1,122 +1,160 @@
 {
   "$schema": "https://mintlify.com/docs.json",
+  "name": "AnimeThemes Server",
   "theme": "mint",
-  "name": "Mint Starter Kit",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#7C3AED",
+    "light": "#A78BFA",
+    "dark": "#6D28D9"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/AnimeThemes/animethemes-server"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/AnimeThemes/animethemes-server"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "installation"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "concepts/database-structure",
+              "concepts/resource-types",
+              "concepts/media-streaming"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Authentication",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "auth/overview",
+              "auth/sanctum",
+              "auth/permissions"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "REST API",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Overview",
             "pages": [
-              "api-reference/introduction"
+              "api/introduction",
+              "api/pagination",
+              "api/filtering",
+              "api/rate-limits"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Wiki Resources",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/wiki/anime",
+              "api/wiki/themes",
+              "api/wiki/artists",
+              "api/wiki/songs",
+              "api/wiki/videos",
+              "api/wiki/audio",
+              "api/wiki/images",
+              "api/wiki/series",
+              "api/wiki/studios"
+            ]
+          },
+          {
+            "group": "Playlists",
+            "pages": [
+              "api/playlists/overview",
+              "api/playlists/tracks",
+              "api/playlists/management"
+            ]
+          },
+          {
+            "group": "User Resources",
+            "pages": [
+              "api/users/profiles",
+              "api/users/external-profiles"
+            ]
+          },
+          {
+            "group": "Admin",
+            "pages": [
+              "api/admin/announcements",
+              "api/admin/features",
+              "api/admin/dumps"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "GraphQL API",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "graphql/introduction",
+              "graphql/queries",
+              "graphql/filtering",
+              "graphql/sorting",
+              "graphql/pagination"
+            ]
+          },
+          {
+            "group": "Schema",
+            "pages": [
+              "graphql/schema/types",
+              "graphql/schema/anime",
+              "graphql/schema/artists",
+              "graphql/schema/songs",
+              "graphql/schema/videos"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Advanced",
+        "groups": [
+          {
+            "group": "Configuration",
+            "pages": [
+              "advanced/environment",
+              "advanced/feature-flags",
+              "advanced/storage",
+              "advanced/elasticsearch"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "advanced/admin-panel",
+              "advanced/commands",
+              "advanced/database-dumps"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "advanced/contributing",
+              "advanced/testing",
+              "advanced/architecture"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

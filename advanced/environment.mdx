@@ -1,0 +1,456 @@
+---
+title: Environment Variables
+description: Complete reference for environment variables in AnimeThemes Server
+---
+
+This page documents all environment variables available in AnimeThemes Server. Configure these in your `.env` file.
+
+## API Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_PATH` | `/api` | The path prefix for API endpoints |
+| `API_URL` | - | The full URL for the API (optional) |
+
+## Application
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APP_NAME` | `AnimeThemes` | The name of the application |
+| `APP_ENV` | `local` | Environment: `local`, `staging`, or `production` |
+| `APP_DEBUG` | `true` | Enable debug mode (disable in production) |
+| `APP_URL` | `http://localhost` | The base URL of the application |
+| `APP_KEY` | - | Application encryption key (generate with `php artisan key:generate`) |
+| `ASSET_URL` | `null` | CDN URL for assets (optional) |
+| `DEBUGBAR_ENABLED` | `true` | Enable Laravel Debugbar |
+| `DEBUGBAR_EDITOR` | - | Editor to open files from Debugbar |
+| `AUDITING_ENABLED` | `true` | Enable model auditing |
+
+## Audio Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AUDIO_DISK_DEFAULT` | `audios_local` | Default disk for audio files |
+| `AUDIO_DISKS` | `audios_local` | Comma-separated list of audio disks |
+| `AUDIO_DISK_ROOT` | - | Root path for local audio storage |
+| `AUDIO_PATH` | `/audio` | Path prefix for audio URLs |
+| `AUDIO_URL` | - | Subdomain URL for audio (e.g., `a.animethemes.test`) |
+| `AUDIO_STREAMING_METHOD` | `response` | Streaming method: `response` or `nginx` |
+| `AUDIO_NGINX_REDIRECT` | - | Nginx internal redirect location for audio |
+
+### Audio Storage (S3)
+
+Configure separate S3 buckets for different regions:
+
+**NYC Region:**
+- `AUDIO_NYC_ACCESS_KEY_ID`
+- `AUDIO_NYC_SECRET_ACCESS_KEY`
+- `AUDIO_NYC_DEFAULT_REGION`
+- `AUDIO_NYC_ENDPOINT`
+- `AUDIO_NYC_BUCKET`
+- `AUDIO_NYC_STREAM_READS`
+- `AUDIO_NYC_DISABLE_ASSERTS`
+- `AUDIO_NYC_VISIBILITY`
+
+**FRA Region:**
+- `AUDIO_FRA_ACCESS_KEY_ID`
+- `AUDIO_FRA_SECRET_ACCESS_KEY`
+- `AUDIO_FRA_DEFAULT_REGION`
+- `AUDIO_FRA_ENDPOINT`
+- `AUDIO_FRA_BUCKET`
+- `AUDIO_FRA_STREAM_READS`
+- `AUDIO_FRA_DISABLE_ASSERTS`
+- `AUDIO_FRA_VISIBILITY`
+
+## Broadcasting
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BROADCAST_DRIVER` | `log` | Broadcasting driver: `log`, `pusher`, `ably`, etc. |
+| `PUSHER_APP_KEY` | - | Pusher application key |
+| `PUSHER_APP_SECRET` | - | Pusher application secret |
+| `PUSHER_APP_ID` | - | Pusher application ID |
+| `PUSHER_HOST` | - | Pusher host |
+| `PUSHER_APP_CLUSTER` | `mt1` | Pusher cluster |
+| `PUSHER_PORT` | `443` | Pusher port |
+| `PUSHER_SCHEME` | `https` | Pusher scheme |
+| `ABLY_KEY` | - | Ably key |
+
+## Cache
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CACHE_DRIVER` | `file` | Cache driver: `file`, `redis`, `memcached`, `dynamodb` |
+| `CACHE_PREFIX` | `animethemes` | Cache key prefix |
+| `MEMCACHED_PERSISTENT_ID` | - | Memcached persistent ID |
+| `MEMCACHED_USERNAME` | - | Memcached username |
+| `MEMCACHED_PASSWORD` | - | Memcached password |
+| `MEMCACHED_HOST` | `127.0.0.1` | Memcached host |
+| `MEMCACHED_PORT` | `11211` | Memcached port |
+| `DYNAMODB_CACHE_TABLE` | `cache` | DynamoDB cache table name |
+| `DYNAMODB_ENDPOINT` | - | DynamoDB endpoint |
+
+## Database
+
+### MySQL Production
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_CONNECTION` | `mysql_prod` | Default database connection |
+| `DATABASE_URL` | - | Full database URL (optional) |
+| `DB_HOST_READ` | `127.0.0.1` | Read replica host |
+| `DB_HOST_WRITE` | `127.0.0.1` | Write host |
+| `DB_STICKY` | `false` | Enable sticky read connections |
+| `DB_PORT` | `3306` | Database port |
+| `DB_DATABASE` | `animethemes` | Database name |
+| `DB_USERNAME` | `root` | Database username |
+| `DB_PASSWORD` | - | Database password |
+| `DB_SOCKET` | - | Unix socket path (optional) |
+| `MYSQL_ATTR_SSL_CA` | `null` | SSL CA certificate path |
+
+### MySQL Beta (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_BETA_URL` | - | Beta database URL |
+| `DB_BETA_HOST` | - | Beta database host |
+| `DB_BETA_PORT` | `3306` | Beta database port |
+| `DB_BETA_DATABASE` | `animethemes-beta` | Beta database name |
+| `DB_BETA_USERNAME` | `root` | Beta database username |
+| `DB_BETA_PASSWORD` | - | Beta database password |
+| `DB_BETA_SOCKET` | - | Beta database socket |
+
+### Redis
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDIS_CLIENT` | `predis` | Redis client: `predis` or `phpredis` |
+| `REDIS_CLUSTER` | `redis` | Redis cluster configuration |
+| `REDIS_URL` | `null` | Full Redis URL (optional) |
+| `REDIS_HOST` | `127.0.0.1` | Redis host |
+| `REDIS_PASSWORD` | `null` | Redis password |
+| `REDIS_PORT` | `6379` | Redis port |
+| `REDIS_SCHEME` | `tcp` | Redis connection scheme |
+| `REDIS_DB` | `0` | Default Redis database |
+| `REDIS_CACHE_DB` | `1` | Redis cache database |
+
+## Dump Configuration
+
+Database dump downloads:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DUMP_DISK` | `dumps_local` | Disk for database dumps |
+| `DUMP_DISK_ROOT` | - | Root path for local dump storage |
+| `DUMP_URL` | `http://localhost` | URL for dump downloads |
+| `DUMP_PATH` | `/dump` | Path prefix for dump URLs |
+
+### Dump Storage (S3)
+
+- `DUMP_ACCESS_KEY_ID`
+- `DUMP_SECRET_ACCESS_KEY`
+- `DUMP_DEFAULT_REGION`
+- `DUMP_ENDPOINT`
+- `DUMP_BUCKET`
+- `DUMP_STREAM_READS`
+- `DUMP_DISABLE_ASSERTS`
+- `DUMP_VISIBILITY`
+
+## Elasticsearch
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ELASTIC_CONNECTION` | `default` | Elasticsearch connection name |
+| `ELASTIC_HOST` | `http://localhost:9200` | Elasticsearch host URL |
+| `ELASTIC_SCOUT_DRIVER_REFRESH_DOCUMENTS` | `false` | Refresh documents immediately after indexing |
+| `ELASTIC_MIGRATIONS_TABLE` | `elastic_migrations` | Migration tracking table |
+
+See [Elasticsearch Setup](/advanced/elasticsearch) for detailed configuration.
+
+## FFmpeg
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FFMPEG_BINARIES` | - | Path to FFmpeg binary (auto-detected if not set) |
+| `FFPROBE_BINARIES` | - | Path to FFprobe binary (auto-detected if not set) |
+
+## Filament Admin
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FILAMENT_URL` | - | Admin panel URL (optional) |
+| `FILAMENT_PATH` | `admin` | Admin panel path |
+| `FILAMENT_SUBMISSION_URL` | - | Submission panel URL (optional) |
+| `FILAMENT_SUBMISSION_PATH` | `submission` | Submission panel path |
+
+## Filesystems
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FILESYSTEM_DISK` | `local` | Default filesystem disk |
+
+See [Storage Configuration](/advanced/storage) for detailed disk configuration.
+
+### Image Storage
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IMAGE_DISK` | `images_local` | Default disk for images |
+| `IMAGE_DISK_ROOT` | - | Root path for local image storage |
+| `IMAGE_ACCESS_KEY_ID` | - | S3 access key for images |
+| `IMAGE_SECRET_ACCESS_KEY` | - | S3 secret key for images |
+| `IMAGE_DEFAULT_REGION` | - | S3 region for images |
+| `IMAGE_ENDPOINT` | - | S3 endpoint for images |
+| `IMAGE_BUCKET` | - | S3 bucket for images |
+| `IMAGE_STREAM_READS` | - | Enable stream reads |
+| `IMAGE_DISABLE_ASSERTS` | - | Disable S3 assertions |
+| `IMAGE_VISIBILITY` | - | Default file visibility |
+| `IMAGE_URL` | - | CDN URL for images |
+
+### Script Storage
+
+For video encoding scripts:
+
+- `SCRIPT_DISK` - Default: `scripts_local`
+- `SCRIPT_DISK_ROOT` - Root path for local storage
+- `SCRIPT_URL` - Subdomain URL
+- `SCRIPT_PATH` - Default: `/videoscript`
+
+Plus S3 configuration variables (`SCRIPT_ACCESS_KEY_ID`, etc.)
+
+## GraphQL
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GRAPHQL_URL` | - | GraphQL endpoint URL (optional) |
+| `GRAPHQL_PATH` | `/graphql` | GraphQL endpoint path |
+| `GRAPHQL_RATE_LIMIT` | `90` | Requests per minute |
+| `GRAPHIQL_ENABLED` | `true` | Enable GraphiQL playground |
+
+## Hashids
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HASHIDS_SALT_MAIN` | - | Salt for main hashid generation |
+| `HASHIDS_SALT_PLAYLISTS` | - | Salt for playlist hashids |
+
+## Hashing
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BCRYPT_ROUNDS` | `10` | BCrypt hashing rounds |
+
+## Horizon
+
+Laravel Horizon for queue management:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HORIZON_URL` | - | Horizon dashboard URL (optional) |
+| `HORIZON_PATH` | `horizon` | Horizon dashboard path |
+
+## Logging
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_CHANNEL` | `daily` | Logging channel: `daily`, `single`, `stack`, etc. |
+| `LOG_DEPRECATIONS_CHANNEL` | `null` | Channel for deprecation warnings |
+| `LOG_LEVEL` | `debug` | Minimum log level: `debug`, `info`, `warning`, `error` |
+
+## Mail
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAIL_MAILER` | `log` | Mail driver: `log`, `smtp`, `mailgun`, `postmark` |
+| `MAIL_HOST` | `smtp.mailgun.org` | SMTP host |
+| `MAIL_PORT` | `587` | SMTP port |
+| `MAIL_ENCRYPTION` | `tls` | SMTP encryption: `tls` or `ssl` |
+| `MAIL_USERNAME` | `null` | SMTP username |
+| `MAIL_PASSWORD` | `null` | SMTP password |
+| `MAIL_FROM_ADDRESS` | `null` | Default sender email |
+| `MAIL_FROM_NAME` | `${APP_NAME}` | Default sender name |
+| `MAIL_SENDMAIL_PATH` | `/usr/sbin/sendmail -bs -i` | Sendmail binary path |
+| `MAIL_LOG_CHANNEL` | - | Log channel for mail driver |
+
+## Pennant (Feature Flags)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PENNANT_STORE` | `database` | Feature flag store: `database` or `array` |
+
+See [Feature Flags](/advanced/feature-flags) for usage.
+
+## Playlists
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PLAYLIST_MAX_TRACKS` | `1000` | Maximum tracks per playlist |
+| `USER_MAX_PLAYLISTS` | `1000` | Maximum playlists per user |
+
+## Queue
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `QUEUE_CONNECTION` | `sync` | Queue driver: `sync`, `redis`, `database`, `sqs` |
+| `REDIS_QUEUE` | `default` | Redis queue name |
+| `QUEUE_FAILED_DRIVER` | `database-uuids` | Failed job storage driver |
+
+## Sanctum
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SANCTUM_STATEFUL_DOMAINS` | - | Comma-separated list of stateful domains |
+
+## Scout (Search)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SCOUT_DRIVER` | `null` | Search driver: `elastic`, `algolia`, `meilisearch`, `database` |
+| `SCOUT_PREFIX` | - | Index prefix for multi-tenant setups |
+| `SCOUT_QUEUE` | `false` | Queue search index updates |
+| `SCOUT_IDENTIFY` | `false` | Identify users to search engine |
+| `ALGOLIA_APP_ID` | - | Algolia application ID |
+| `ALGOLIA_SECRET` | - | Algolia API key |
+
+## Secure Headers
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_CLEAR_SITE_DATA` | `false` | Enable Clear-Site-Data header |
+| `ENABLE_HSTS` | `false` | Enable HTTP Strict Transport Security |
+| `ENABLE_EXPECT_CT` | `false` | Enable Certificate Transparency |
+| `ENABLE_PERMISSIONS_POLICY` | `false` | Enable Permissions Policy |
+| `ENABLE_CSP` | `false` | Enable Content Security Policy |
+
+## Services
+
+Third-party service integrations:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAILGUN_DOMAIN` | - | Mailgun domain |
+| `MAILGUN_SECRET` | - | Mailgun API key |
+| `MAILGUN_ENDPOINT` | `api.mailgun.net` | Mailgun API endpoint |
+| `POSTMARK_TOKEN` | - | Postmark API token |
+| `DISCORD_BOT_API_TOKEN` | - | Discord bot token |
+| `DISCORD_BOT_API_URL` | - | Discord bot API URL |
+| `DISCORD_BOT_API_KEY` | - | Discord bot API key |
+| `DB_UPDATES_DISCORD_CHANNEL` | - | Discord channel for database updates |
+| `ADMIN_DISCORD_CHANNEL` | - | Discord channel for admin notifications |
+| `OPENAI_BEARER_TOKEN` | `null` | OpenAI API token |
+
+### MyAnimeList
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAL_CLIENT_ID` | `null` | MyAnimeList client ID |
+| `MAL_CLIENT_SECRET` | `null` | MyAnimeList client secret |
+| `MAL_REDIRECT_URI` | `null` | OAuth redirect URI |
+
+### AniList
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANILIST_CLIENT_ID` | `null` | AniList client ID |
+| `ANILIST_CLIENT_SECRET` | `null` | AniList client secret |
+| `ANILIST_REDIRECT_URI` | `null` | OAuth redirect URI |
+
+## Session
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SESSION_DRIVER` | `database` | Session driver: `file`, `cookie`, `database`, `redis` |
+| `SESSION_LIFETIME` | `120` | Session lifetime in minutes |
+| `SESSION_CONNECTION` | `null` | Database connection for sessions |
+| `SESSION_STORE` | `null` | Cache store for sessions |
+| `SESSION_DOMAIN` | `null` | Session cookie domain |
+| `SESSION_SECURE_COOKIE` | - | Use secure cookies (HTTPS only) |
+
+## Submissions
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `USER_MAX_SUBMISSIONS` | `50` | Maximum submissions per user |
+
+## User Profiles
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `USER_MAX_PROFILES` | `5` | Maximum external profiles per user |
+
+## Validation
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MODERATION_SERVICE` | `none` | Content moderation service |
+
+## Video Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VIDEO_DISK_DEFAULT` | `videos_local` | Default disk for video files |
+| `VIDEO_DISKS` | `videos_local` | Comma-separated list of video disks |
+| `VIDEO_DISK_ROOT` | - | Root path for local video storage |
+| `VIDEO_PATH` | `/video` | Path prefix for video URLs |
+| `VIDEO_URL` | - | Subdomain URL for video (e.g., `v.animethemes.test`) |
+| `VIDEO_RATE_LIMITER` | `90` | Requests per minute (≤0 for unlimited) |
+| `VIDEO_STREAMING_METHOD` | `response` | Streaming method: `response` or `nginx` |
+| `VIDEO_NGINX_REDIRECT` | - | Nginx internal redirect location for video |
+
+### Video Storage (S3)
+
+Configure separate S3 buckets for different regions:
+
+**NYC Region:**
+- `VIDEO_NYC_ACCESS_KEY_ID`
+- `VIDEO_NYC_SECRET_ACCESS_KEY`
+- `VIDEO_NYC_DEFAULT_REGION`
+- `VIDEO_NYC_ENDPOINT`
+- `VIDEO_NYC_BUCKET`
+- `VIDEO_NYC_STREAM_READS`
+- `VIDEO_NYC_DISABLE_ASSERTS`
+- `VIDEO_NYC_VISIBILITY`
+
+**FRA Region:**
+- `VIDEO_FRA_ACCESS_KEY_ID`
+- `VIDEO_FRA_SECRET_ACCESS_KEY`
+- `VIDEO_FRA_DEFAULT_REGION`
+- `VIDEO_FRA_ENDPOINT`
+- `VIDEO_FRA_BUCKET`
+- `VIDEO_FRA_STREAM_READS`
+- `VIDEO_FRA_DISABLE_ASSERTS`
+- `VIDEO_FRA_VISIBILITY`
+
+## Web Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEB_URL` | `http://localhost` | Frontend application URL |
+| `WEB_PATH` | - | Frontend path prefix |
+
+## Wiki Configuration
+
+Links to wiki/frontend pages:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WIKI_LOGIN` | `http://localhost/login` | Login page URL |
+| `WIKI_RESET_PASSWORD` | `http://localhost/reset-password` | Password reset page URL |
+| `WIKI_EXTERNAL_PROFILE` | `http://localhost/external` | External profile page URL |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Storage Configuration" icon="hard-drive" href="/advanced/storage">
+    Configure local and S3 storage disks
+  </Card>
+  <Card title="Feature Flags" icon="flag" href="/advanced/feature-flags">
+    Manage feature flags with Pennant
+  </Card>
+  <Card title="Elasticsearch" icon="magnifying-glass" href="/advanced/elasticsearch">
+    Set up Elasticsearch for search
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/deployment/docker">
+    Deploy to production
+  </Card>
+</CardGroup>

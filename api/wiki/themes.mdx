@@ -1,0 +1,304 @@
+---
+title: 'Anime Themes'
+description: 'Anime theme (opening/ending) resource endpoints'
+---
+
+## Overview
+
+The Anime Theme resource represents opening (OP), ending (ED), and insert (IN) songs for anime. Each theme is associated with an anime, song, and may have a group.
+
+## List Anime Themes
+
+<ParamField path="GET" type="endpoint">
+  /api/animetheme
+</ParamField>
+
+Retrieve a paginated list of anime themes.
+
+### Query Parameters
+
+<ParamField query="page[size]" type="integer">
+  Number of results per page (default: 15, max: 100)
+</ParamField>
+
+<ParamField query="page[number]" type="integer">
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relationships to include. Available includes:
+  - `anime` - Parent anime
+  - `anime.images` - Anime images
+  - `song` - Associated song
+  - `song.artists` - Song artists
+  - `song.performances` - Song performances
+  - `song.performances.artist` - Performance artists
+  - `group` - Theme group (if applicable)
+  - `animethemeentries` - Theme entries
+  - `animethemeentries.videos` - Videos for each entry
+  - `animethemeentries.videos.audio` - Audio tracks
+</ParamField>
+
+<ParamField query="filter[type]" type="string">
+  Filter by theme type. Values: `OP`, `ED`, `IN`
+</ParamField>
+
+<ParamField query="filter[sequence]" type="integer">
+  Filter by sequence number
+</ParamField>
+
+<ParamField query="filter[anime_id]" type="integer">
+  Filter by anime ID
+</ParamField>
+
+<ParamField query="filter[song_id]" type="integer">
+  Filter by song ID
+</ParamField>
+
+<ParamField query="fields[animetheme]" type="string">
+  Comma-separated list of fields to return. Available fields:
+  - `theme_id`
+  - `anime_id`
+  - `song_id`
+  - `group_id`
+  - `type`
+  - `sequence`
+  - `slug`
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort by field. Prefix with `-` for descending order.
+  Available: `type`, `sequence`, `created_at`, `updated_at`
+</ParamField>
+
+<ParamField query="q" type="string">
+  Full-text search query across themes, anime names, and song titles
+</ParamField>
+
+### Response
+
+<ResponseField name="animethemes" type="array">
+  Array of anime theme objects
+  
+  <ResponseField name="theme_id" type="integer">
+    Unique identifier
+  </ResponseField>
+  
+  <ResponseField name="anime_id" type="integer">
+    Parent anime ID
+  </ResponseField>
+  
+  <ResponseField name="song_id" type="integer" optional>
+    Associated song ID
+  </ResponseField>
+  
+  <ResponseField name="group_id" type="integer" optional>
+    Theme group ID
+  </ResponseField>
+  
+  <ResponseField name="type" type="string">
+    Theme type (OP, ED, IN)
+  </ResponseField>
+  
+  <ResponseField name="sequence" type="integer" optional>
+    Sequence number for multiple OPs/EDs
+  </ResponseField>
+  
+  <ResponseField name="slug" type="string">
+    Generated slug (e.g., "OP1", "ED2")
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/animetheme?include=anime,song.artists&filter[type]=OP&page[size]=10"
+```
+
+### Example Response
+
+```json
+{
+  "animethemes": [
+    {
+      "theme_id": 1,
+      "anime_id": 1,
+      "song_id": 1,
+      "group_id": null,
+      "type": "OP",
+      "sequence": 1,
+      "slug": "OP1",
+      "created_at": "2024-01-15T12:00:00.000000Z",
+      "updated_at": "2024-01-15T12:00:00.000000Z",
+      "anime": {
+        "anime_id": 1,
+        "name": "Cowboy Bebop",
+        "slug": "cowboy_bebop",
+        "year": 1998,
+        "season": "Spring"
+      },
+      "song": {
+        "song_id": 1,
+        "title": "Tank!",
+        "title_native": null,
+        "artists": [
+          {
+            "artist_id": 1,
+            "name": "The Seatbelts",
+            "slug": "the_seatbelts"
+          }
+        ]
+      }
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/animetheme?page[number]=1",
+    "next": "https://api.animethemes.moe/api/animetheme?page[number]=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 10
+  }
+}
+```
+
+## Show Anime Theme
+
+<ParamField path="GET" type="endpoint">
+  /api/animetheme/:id
+</ParamField>
+
+Retrieve a single anime theme by its ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The theme ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Same includes as list endpoint
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/animetheme/1?include=anime,song.artists,animethemeentries.videos"
+```
+
+### Example Response
+
+```json
+{
+  "animetheme": {
+    "theme_id": 1,
+    "anime_id": 1,
+    "song_id": 1,
+    "type": "OP",
+    "sequence": 1,
+    "slug": "OP1",
+    "anime": {
+      "anime_id": 1,
+      "name": "Cowboy Bebop",
+      "slug": "cowboy_bebop"
+    },
+    "song": {
+      "song_id": 1,
+      "title": "Tank!",
+      "artists": [
+        {
+          "artist_id": 1,
+          "name": "The Seatbelts"
+        }
+      ]
+    },
+    "animethemeentries": [
+      {
+        "entry_id": 1,
+        "version": 1,
+        "episodes": "1-26",
+        "videos": [
+          {
+            "video_id": 1,
+            "basename": "CowboyBebop-OP1.webm",
+            "resolution": 1080,
+            "source": "BD"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Create Anime Theme
+
+<ParamField path="POST" type="endpoint">
+  /api/animetheme
+</ParamField>
+
+Create a new anime theme. Requires authentication.
+
+### Request Body
+
+<ParamField body="anime_id" type="integer" required>
+  Parent anime ID
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Theme type (OP, ED, IN)
+</ParamField>
+
+<ParamField body="sequence" type="integer" optional>
+  Sequence number
+</ParamField>
+
+<ParamField body="song_id" type="integer" optional>
+  Associated song ID
+</ParamField>
+
+<ParamField body="group_id" type="integer" optional>
+  Theme group ID
+</ParamField>
+
+## Update Anime Theme
+
+<ParamField path="PUT" type="endpoint">
+  /api/animetheme/:id
+</ParamField>
+
+Update an existing anime theme. Requires authentication.
+
+## Delete Anime Theme
+
+<ParamField path="DELETE" type="endpoint">
+  /api/animetheme/:id
+</ParamField>
+
+Soft delete an anime theme. Requires authentication.
+
+## Restore Anime Theme
+
+<ParamField path="PATCH" type="endpoint">
+  /restore/animetheme/:id
+</ParamField>
+
+Restore a soft-deleted anime theme. Requires authentication.
+
+## Force Delete Anime Theme
+
+<ParamField path="DELETE" type="endpoint">
+  /forceDelete/animetheme/:id
+</ParamField>
+
+Permanently delete an anime theme. Requires authentication.

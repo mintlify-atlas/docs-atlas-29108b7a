@@ -1,0 +1,176 @@
+---
+title: REST API Introduction
+description: Learn how to use the AnimeThemes REST API
+---
+
+The AnimeThemes API is a RESTful API that provides access to anime theme songs, videos, artists, and related metadata. This API follows JSON:API specification conventions for request and response formatting.
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://api.animethemes.moe/api
+```
+
+The base path is configurable via the `API_PATH` environment variable (default: `/api`).
+
+## API Versioning
+
+Currently, the API does not use explicit versioning in the URL path. All endpoints are accessible directly under the base URL.
+
+## Request Format
+
+All requests should include the following headers:
+
+```http
+Accept: application/json
+Content-Type: application/json
+```
+
+The API automatically sets the `Accept` header to `application/json` if not provided.
+
+## Response Format
+
+The API returns responses in JSON format following a consistent structure.
+
+### Single Resource Response
+
+When requesting a single resource, the response wraps the data in a resource-specific key:
+
+```json
+{
+  "anime": {
+    "id": 1,
+    "name": "Cowboy Bebop",
+    "slug": "cowboy_bebop",
+    "year": 1998,
+    "season": "Spring"
+  }
+}
+```
+
+### Collection Response
+
+When requesting a collection of resources, the response includes pagination metadata:
+
+```json
+{
+  "anime": [
+    {
+      "id": 1,
+      "name": "Cowboy Bebop",
+      "slug": "cowboy_bebop",
+      "year": 1998,
+      "season": "Spring"
+    },
+    {
+      "id": 2,
+      "name": "Samurai Champloo",
+      "slug": "samurai_champloo",
+      "year": 2004,
+      "season": "Spring"
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/anime?page[size]=15&page[number]=1",
+    "last": null,
+    "prev": null,
+    "next": "https://api.animethemes.moe/api/anime?page[size]=15&page[number]=2"
+  }
+}
+```
+
+## Available Resources
+
+The API provides access to the following main resources:
+
+- **Anime** - `/anime` - Anime series and movies
+- **Artist** - `/artist` - Artists who perform theme songs
+- **Song** - `/song` - Theme songs
+- **Video** - `/video` - Video files of themes
+- **Audio** - `/audio` - Audio files of themes
+- **Theme** - `/animetheme` - Anime themes (OP/ED)
+- **Entry** - `/animethemeentry` - Theme entries
+- **Series** - `/series` - Anime series groupings
+- **Studio** - `/studio` - Animation studios
+- **Image** - `/image` - Cover images
+- **External Resources** - `/resource` - External links (MAL, AniList, etc.)
+
+## Example Requests
+
+### Get All Anime
+
+```bash
+curl https://api.animethemes.moe/api/anime
+```
+
+### Get Specific Anime by ID
+
+```bash
+curl https://api.animethemes.moe/api/anime/1
+```
+
+### Get Anime with Related Resources
+
+```bash
+curl "https://api.animethemes.moe/api/anime/1?include=animethemes,images"
+```
+
+### Search for Anime
+
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[name]=cowboy"
+```
+
+## HTTP Methods
+
+The API supports the following HTTP methods:
+
+- **GET** - Retrieve resources (index and show)
+- **POST** - Create new resources (requires authentication)
+- **PUT/PATCH** - Update existing resources (requires authentication)
+- **DELETE** - Soft delete resources (requires authentication)
+
+## Authentication
+
+Most read operations (GET requests) do not require authentication. Creating, updating, or deleting resources requires authentication via Laravel Sanctum.
+
+Authenticated requests should include:
+
+```http
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+## Error Responses
+
+Error responses follow a standard format:
+
+```json
+{
+  "message": "The given data was invalid.",
+  "errors": {
+    "field_name": [
+      "The field name is required."
+    ]
+  }
+}
+```
+
+### Common HTTP Status Codes
+
+- **200 OK** - Request successful
+- **201 Created** - Resource created successfully
+- **400 Bad Request** - Invalid request parameters
+- **401 Unauthorized** - Authentication required
+- **403 Forbidden** - Insufficient permissions
+- **404 Not Found** - Resource not found
+- **422 Unprocessable Entity** - Validation failed
+- **429 Too Many Requests** - Rate limit exceeded
+- **500 Internal Server Error** - Server error
+
+## Next Steps
+
+- Learn about [Pagination](/api/pagination)
+- Explore [Filtering and Query Parameters](/api/filtering)
+- Understand [Rate Limits](/api/rate-limits)

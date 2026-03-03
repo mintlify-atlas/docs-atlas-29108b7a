@@ -1,0 +1,367 @@
+---
+title: Filtering in GraphQL
+description: Learn how to filter query results using WhereConditions and other filters
+---
+
+The AnimeThemes GraphQL API provides powerful filtering capabilities to help you retrieve exactly the data you need.
+
+## WhereConditions Filter
+
+The primary filtering mechanism is the `where` argument, which accepts a list of conditions with field, value, and operator.
+
+### Basic Filtering
+
+Filter anime by year:
+
+```graphql
+query {
+  animePagination(first: 10, where: [
+    { field: YEAR, value: 2009 }
+  ]) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+### Comparison Operators
+
+The following comparison operators are available:
+
+| Operator | SQL Equivalent | Description |
+|----------|----------------|-------------|
+| `EQ` | `=` | Equal to (default) |
+| `NE` | `<>` | Not equal to |
+| `LT` | `<` | Less than |
+| `GT` | `>` | Greater than |
+| `LTE` | `<=` | Less than or equal to |
+| `GTE` | `>=` | Greater than or equal to |
+| `LIKE` | `LIKE` | Pattern matching |
+| `NOTLIKE` | `NOT LIKE` | Negated pattern matching |
+
+### Using Operators
+
+```graphql
+query {
+  animePagination(first: 10, where: [
+    { field: YEAR, operator: GTE, value: 2020 }
+  ]) {
+    data {
+      name
+      year
+    }
+  }
+}
+```
+
+### LIKE Operator
+
+Use the `LIKE` operator for pattern matching:
+
+```graphql
+query {
+  animePagination(first: 10, where: [
+    { field: NAME, operator: LIKE, value: "%monogatari%" }
+  ]) {
+    data {
+      name
+      slug
+    }
+  }
+}
+```
+
+<Note>
+  Use `%` as a wildcard in LIKE patterns. For example:
+  - `%monogatari%` matches any name containing "monogatari"
+  - `monogatari%` matches names starting with "monogatari"
+  - `%monogatari` matches names ending with "monogatari"
+</Note>
+
+## Logical Operators
+
+Combine multiple conditions using `AND` and `OR` logical operators.
+
+### AND Conditions
+
+All conditions must be true:
+
+```graphql
+query {
+  animePagination(first: 10, where: [
+    {
+      AND: [
+        { field: YEAR, value: 2009 },
+        { field: SEASON, value: "SUMMER" }
+      ]
+    }
+  ]) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+### OR Conditions
+
+At least one condition must be true:
+
+```graphql
+query {
+  animePagination(first: 10, where: [
+    {
+      OR: [
+        { field: YEAR, value: 2009 },
+        { field: YEAR, value: 2010 }
+      ]
+    }
+  ]) {
+    data {
+      name
+      year
+    }
+  }
+}
+```
+
+### Complex Nested Conditions
+
+Combine AND and OR for complex filtering:
+
+```graphql
+query {
+  animePagination(first: 10, where: [
+    {
+      AND: [
+        {
+          OR: [
+            { field: YEAR, value: 2009 },
+            { field: YEAR, value: 2010 }
+          ]
+        },
+        { field: SEASON, value: "SUMMER" }
+      ]
+    }
+  ]) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+This query finds anime from Summer 2009 OR Summer 2010.
+
+## Multiple Top-Level Conditions
+
+Multiple top-level conditions in the `where` array are combined with AND:
+
+```graphql
+query {
+  animePagination(first: 10, where: [
+    { field: YEAR, operator: GTE, value: 2020 },
+    { field: SEASON, value: "SUMMER" }
+  ]) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+## Filterable Fields
+
+Each resource type has specific filterable fields. Use the GraphiQL sandbox to explore available fields through autocomplete.
+
+### Common Filterable Fields
+
+**Anime:**
+- `ID`
+- `NAME`
+- `SLUG`
+- `YEAR`
+- `SEASON`
+- `MEDIA_FORMAT`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+**Artist:**
+- `ID`
+- `NAME`
+- `SLUG`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+**Video:**
+- `ID`
+- `BASENAME`
+- `FILENAME`
+- `RESOLUTION`
+- `NC`
+- `SUBBED`
+- `LYRICS`
+- `UNCEN`
+- `SOURCE`
+- `OVERLAP`
+
+## Trashed Filter
+
+Some resources support soft deletes. Use the `trashed` argument to include or exclude soft-deleted records:
+
+```graphql
+query {
+  animePagination(first: 10, trashed: WITH) {
+    data {
+      name
+      deleted_at
+    }
+  }
+}
+```
+
+**Trashed Options:**
+- `WITHOUT` - Exclude soft-deleted records (default)
+- `WITH` - Include soft-deleted records
+- `ONLY` - Return only soft-deleted records
+
+## Filtering Relations
+
+When querying nested relations, you can apply filters to the related resources:
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    name
+    themes(where: [
+      { field: TYPE, value: "OP" }
+    ]) {
+      id
+      type
+      sequence
+      slug
+    }
+  }
+}
+```
+
+## Search Argument
+
+Some resources support full-text search with the `search` argument:
+
+```graphql
+query {
+  animePagination(first: 10, search: "bakemonogatari") {
+    data {
+      name
+      slug
+      year
+    }
+  }
+}
+```
+
+<Note>
+  The `search` argument performs a full-text search across multiple fields, providing more flexible matching than the `where` filter.
+</Note>
+
+## Practical Examples
+
+### Find Recent Anime
+
+```graphql
+query {
+  animePagination(
+    first: 20,
+    where: [
+      { field: YEAR, operator: GTE, value: 2023 }
+    ],
+    sort: [{ field: YEAR, order: DESC }]
+  ) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+### Find Anime by Season Range
+
+```graphql
+query {
+  animePagination(
+    first: 50,
+    where: [
+      { field: YEAR, operator: GTE, value: 2020 },
+      { field: YEAR, operator: LTE, value: 2021 },
+      { field: SEASON, value: "WINTER" }
+    ]
+  ) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+### Search by Name Pattern
+
+```graphql
+query {
+  animePagination(
+    first: 20,
+    where: [
+      { field: NAME, operator: LIKE, value: "%attack%" }
+    ]
+  ) {
+    data {
+      name
+      slug
+    }
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Specific Filters">
+    Be as specific as possible with your filters to reduce the result set and improve query performance.
+  </Accordion>
+  
+  <Accordion title="Combine with Pagination">
+    Always use pagination when filtering to avoid overwhelming responses with large datasets.
+  </Accordion>
+  
+  <Accordion title="Leverage Indexes">
+    Filters on indexed fields (like `ID`, `SLUG`, `YEAR`) perform better than non-indexed fields.
+  </Accordion>
+  
+  <Accordion title="Test in GraphiQL">
+    Use the GraphiQL sandbox to test complex filter conditions and validate field names.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Sorting" icon="arrow-down-a-z" href="/graphql/sorting">
+    Learn how to sort filtered results
+  </Card>
+  <Card title="Pagination" icon="list" href="/graphql/pagination">
+    Paginate through filtered data
+  </Card>
+</CardGroup>

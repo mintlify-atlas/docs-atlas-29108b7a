@@ -1,0 +1,510 @@
+---
+title: Database Dumps
+description: Creating, managing, and restoring database backups in AnimeThemes Server
+---
+
+AnimeThemes Server provides a comprehensive system for creating and managing database dumps, with specialized commands for different table groups and automated dump management.
+
+## Overview
+
+Database dumps are sanitized backups of specific table groups, designed for:
+
+- **Seeding** - Populating new environments with data
+- **Development** - Syncing local databases with production
+- **Backup** - Creating point-in-time snapshots
+- **Distribution** - Sharing curated datasets publicly
+
+All dumps are stored in object storage and tracked in the database via the `Dump` model.
+
+## Dump Types
+
+AnimeThemes Server organizes dumps by functional domain:
+
+### Wiki Dump
+
+Contains wiki-related tables for anime themes content:
+
+- Anime entries
+- Artists and groups
+- Songs and performances
+- Themes and theme entries
+- Videos and audio
+- Images and resources
+- Studios and series
+- Synonyms
+
+**Command:** `php artisan db:dump-wiki`
+
+### User Dump
+
+Contains user-related tables:
+
+- User accounts
+- User profiles
+- Playlists
+- External profiles
+
+**Command:** `php artisan db:dump-user`
+
+### Auth Dump
+
+Contains authentication and authorization tables:
+
+- Roles
+- Permissions
+- Role-permission mappings
+- User-role assignments
+
+**Command:** `php artisan db:dump-auth`
+
+### Admin Dump
+
+Contains administrative tables:
+
+- Featured themes
+- Features (feature flags)
+- Announcements
+- Action logs
+
+**Command:** `php artisan db:dump-admin`
+
+### List Dump
+
+Contains playlist and list-related tables:
+
+- Playlists
+- Playlist tracks
+- External profiles
+- External entries
+
+**Command:** `php artisan db:dump-list`
+
+### Document Dump
+
+Contains documentation and content page tables:
+
+- Pages
+- Page content
+
+**Command:** `php artisan db:dump-document`
+
+### Discord Dump
+
+Contains Discord integration tables:
+
+- Discord threads
+- Discord messages
+
+**Command:** `php artisan db:dump-discord`
+
+## Creating Dumps
+
+### Basic Usage
+
+The simplest way to create a dump:
+
+```bash
+php artisan db:dump-wiki
+```
+
+This creates a dump with default settings optimized for MySQL.
+
+### Recommended Production Settings
+
+For production dumps, use these recommended options:
+
+```bash
+php artisan db:dump-wiki \
+  --default-character-set=utf8 \
+  --single-transaction=true \
+  --skip-column-statistics \
+  --extended-insert
+```
+
+**Why these options?**
+
+- `--default-character-set=utf8` - Ensures consistent character encoding
+- `--single-transaction=true` - Creates a consistent snapshot without locking tables
+- `--skip-column-statistics` - Reduces dump size and speeds up creation
+- `--extended-insert` - Reduces dump size with multi-row inserts
+
+### MySQL vs PostgreSQL Options
+
+The dump commands support both MySQL and PostgreSQL with database-specific options.
+
+#### MySQL-Specific Options
+
+```bash
+--comments              # Include version info
+--extended-insert       # Multi-row INSERT syntax
+--lock-tables          # Lock tables during dump
+--no-create-info       # Skip CREATE TABLE statements
+--quick                # Retrieve rows one at a time
+--set-gtid-purged=AUTO # GTID settings
+--single-transaction   # Use transactions for consistency
+--skip-column-statistics # Skip ANALYZE statements
+```
+
+#### PostgreSQL-Specific Options
+
+```bash
+--data-only  # Dump only data, no schema
+--inserts    # Use INSERT instead of COPY
+```
+
+## Dump Storage
+
+Dumps are stored in object storage configured by `DumpConstants::DISK_QUALIFIED` (typically S3 or compatible).
+
+### Storage Structure
+
+```
+dumps/
+├── wiki/
+│   ├── wiki-2024-03-01-120000.sql
+│   └── wiki-2024-03-02-120000.sql
+├── user/
+│   └── user-2024-03-01-120000.sql
+├── admin/
+│   └── admin-2024-03-01-120000.sql
+└── auth/
+    └── auth-2024-03-01-120000.sql
+```
+
+### Database Tracking
+
+Each dump is tracked in the `dumps` table with:
+
+- `id` - Unique identifier
+- `path` - Storage path to the dump file
+- `public` - Whether the dump is publicly accessible
+- `created_at` - When the dump was created
+- `updated_at` - Last modification time
+
+View dumps in the admin panel at **Admin > Dumps** (app/Filament/Resources/Admin/DumpResource.php:28).
+
+## Restoring Dumps
+
+### Local Development Sync
+
+The easiest way to restore dumps in development:
+
+```bash
+php artisan db:sync --drop
+```
+
+This command:
+
+1. Drops and recreates the database (if `--drop` is used)
+2. Truncates wiki tables
+3. Downloads the latest wiki dump from `https://dump.animethemes.moe/latest/wiki`
+4. Imports the dump into the database
+5. Runs migrations
+6. Seeds permissions, roles, and features
+7. Imports models for Scout search
+
+**Note:** Only works in non-production environments (app/Console/Commands/Database/DatabaseSyncCommand.php:20).
+
+### Manual Restore
+
+To manually restore a dump:
+
+```bash
+# Download the dump file
+curl -o wiki.sql https://dump.animethemes.moe/path/to/dump.sql
+
+# Import into database
+mysql -u username -p database_name < wiki.sql
+
+# Or for PostgreSQL
+psql -U username -d database_name -f wiki.sql
+```
+
+### Partial Restore
+
+To restore only specific tables, use the dump file with table filtering:
+
+```bash
+# MySQL: Extract and import specific table
+mysql -u username -p database_name \
+  -e "SOURCE wiki.sql; -- Only imports specified tables"
+```
+
+## Managing Dumps
+
+### Viewing Dumps
+
+Use the admin panel to view all dumps:
+
+1. Navigate to **Admin > Dumps**
+2. View dump path, public status, and timestamps
+3. Search dumps by path
+
+### Pruning Old Dumps
+
+Automatically remove old dump files:
+
+```bash
+# Remove dumps older than 72 hours (default)
+php artisan prune:dump
+
+# Remove dumps older than 24 hours
+php artisan prune:dump --hours=24
+
+# Remove dumps older than 7 days
+php artisan prune:dump --hours=168
+```
+
+The prune command (app/Console/Commands/Storage/Admin/DumpPruneCommand.php:11):
+
+- Deletes dump files from object storage
+- Removes corresponding database records
+- Logs all deletions
+
+**Recommended Schedule:**
+
+```php
+// In app/Console/Kernel.php
+$schedule->command('prune:dump')->daily();
+```
+
+### Reconciling Dumps
+
+Ensure database records match storage files:
+
+```bash
+php artisan reconcile:dump
+```
+
+This command (app/Console/Commands/Repositories/Storage/Admin/DumpReconcileCommand.php:12):
+
+- Compares dumps in database vs. storage
+- Identifies orphaned records (no file)
+- Identifies orphaned files (no record)
+- Reports inconsistencies
+
+**Run after:**
+
+- Creating dumps
+- Manually deleting files
+- Storage migrations
+- Database restores
+
+## Dump Formats
+
+### SQL Format
+
+Default format for dumps. Contains:
+
+```sql
+-- Table structure
+CREATE TABLE `anime` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(192) NOT NULL,
+  -- ...
+);
+
+-- Table data
+INSERT INTO `anime` VALUES
+(1, 'Sword Art Online', ...),
+(2, 'Attack on Titan', ...);
+```
+
+### Compressed Dumps
+
+While not implemented by default, you can compress dumps:
+
+```bash
+# Create and compress
+php artisan db:dump-wiki --default-character-set=utf8 | gzip > wiki.sql.gz
+
+# Decompress and import
+gunzip -c wiki.sql.gz | mysql -u username -p database_name
+```
+
+## Public Dumps
+
+Some dumps can be marked as public for distribution.
+
+### Making Dumps Public
+
+Set the `public` flag on dump records to make them accessible without authentication. Public dumps are served from:
+
+```
+https://dump.animethemes.moe/latest/wiki
+https://dump.animethemes.moe/latest/user
+```
+
+### Public Dump Use Cases
+
+- **Development**: Allow developers to sync with production data
+- **Community**: Share datasets with the community
+- **Mirrors**: Enable third parties to create mirrors
+- **Research**: Provide data for analysis
+
+## Admin Panel Actions
+
+The Dumps resource in the admin panel provides several actions:
+
+### Dump Wiki
+
+Create a new wiki dump directly from the admin panel.
+
+1. Navigate to **Admin > Dumps**
+2. Click the actions menu
+3. Select **Dump Wiki**
+4. Dump is created in the background
+
+### Dump Document
+
+Create a document dump from the admin panel.
+
+### Prune Dump
+
+Remove old dumps using the configured retention period.
+
+### Reconcile Dump
+
+Trigger reconciliation between database and storage.
+
+## Best Practices
+
+### Dump Creation
+
+1. **Use transactions**: Always use `--single-transaction=true` for consistent snapshots
+2. **Skip statistics**: Use `--skip-column-statistics` to reduce size
+3. **Character set**: Always specify `--default-character-set=utf8`
+4. **Extended inserts**: Use `--extended-insert` for smaller files
+5. **Schedule dumps**: Run dump commands on a schedule for regular backups
+
+### Dump Management
+
+1. **Regular pruning**: Schedule `prune:dump` to run daily
+2. **Monitor storage**: Watch storage usage for dump files
+3. **Reconcile regularly**: Run `reconcile:dump` after bulk operations
+4. **Verify imports**: Always verify dumps after creation
+5. **Test restores**: Regularly test dump restoration in development
+
+### Security
+
+1. **Sanitize data**: Ensure dumps don't contain sensitive information
+2. **Control access**: Only make appropriate dumps public
+3. **Encryption**: Consider encrypting dumps at rest
+4. **Audit**: Monitor dump access and downloads
+5. **Retention**: Don't retain dumps longer than necessary
+
+## Automation
+
+### Scheduled Dump Creation
+
+```php
+// In app/Console/Kernel.php
+protected function schedule(Schedule $schedule)
+{
+    // Daily wiki dump at 2 AM
+    $schedule->command('db:dump-wiki --single-transaction=true --skip-column-statistics')
+             ->dailyAt('02:00');
+    
+    // Weekly full dumps
+    $schedule->command('db:dump-user --single-transaction=true')
+             ->weekly();
+    $schedule->command('db:dump-admin --single-transaction=true')
+             ->weekly();
+    $schedule->command('db:dump-auth --single-transaction=true')
+             ->weekly();
+    
+    // Prune old dumps daily
+    $schedule->command('prune:dump --hours=72')
+             ->daily();
+    
+    // Reconcile weekly
+    $schedule->command('reconcile:dump')
+             ->weekly();
+}
+```
+
+### CI/CD Integration
+
+```yaml
+# Example GitHub Actions workflow
+name: Create Production Dump
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      
+      - name: Create Wiki Dump
+        run: |
+          php artisan db:dump-wiki \
+            --default-character-set=utf8 \
+            --single-transaction=true \
+            --skip-column-statistics \
+            --extended-insert
+      
+      - name: Prune Old Dumps
+        run: php artisan prune:dump --hours=72
+      
+      - name: Reconcile Storage
+        run: php artisan reconcile:dump
+```
+
+## Troubleshooting
+
+### Dump Creation Fails
+
+**Problem:** Dump command fails with error
+
+**Solutions:**
+
+1. Check database credentials
+2. Verify storage disk configuration
+3. Ensure sufficient disk space
+4. Check database server is accessible
+5. Review error logs
+
+### Import Fails
+
+**Problem:** Cannot import dump into database
+
+**Solutions:**
+
+1. Verify SQL syntax compatibility
+2. Check character set matches
+3. Ensure database exists
+4. Verify user permissions
+5. Check for table name conflicts
+
+### Storage Inconsistencies
+
+**Problem:** Reconciliation reports mismatches
+
+**Solutions:**
+
+1. Run `reconcile:dump` to identify issues
+2. Manually verify files in storage
+3. Check database records
+4. Remove orphaned records
+5. Re-create missing dumps
+
+### Slow Dump Creation
+
+**Problem:** Dumps take too long to create
+
+**Solutions:**
+
+1. Use `--quick` for large tables
+2. Use `--single-transaction=true` to avoid locks
+3. Schedule dumps during off-peak hours
+4. Consider table-specific dumps
+5. Optimize database indexes

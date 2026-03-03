@@ -1,0 +1,512 @@
+---
+title: Installation
+description: Set up your own AnimeThemes Server instance for development or production
+---
+
+This guide walks you through installing and configuring AnimeThemes Server on your local machine or server.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="PHP 8.5" icon="php">
+    Required PHP version with modern features
+  </Card>
+  <Card title="MySQL 8+" icon="database">
+    Relational database for data storage
+  </Card>
+  <Card title="Composer" icon="box">
+    PHP dependency manager
+  </Card>
+  <Card title="Web Server" icon="server">
+    Laravel Herd, Apache, or Nginx
+  </Card>
+</CardGroup>
+
+<Note>
+  A LAMP stack like [XAMPP](https://www.apachefriends.org/download.html) can provide Apache, MySQL, and PHP together. Alternatively, use [Laravel Herd](https://herd.laravel.com) for a simpler setup.
+</Note>
+
+## PHP configuration
+
+Before installing, verify your PHP configuration has the required extensions enabled in `php.ini`:
+
+<Steps>
+  <Step title="Enable required extensions">
+    Open your `php.ini` file and ensure these extensions are enabled:
+
+    ```ini php.ini
+    extension=fileinfo  ; Needed to detect MIME types during seeding
+    extension=gd        ; Needed to process image files
+    extension=pdo_mysql ; Needed for MySQL database connection
+    extension=intl      ; Needed for internationalization
+    ```
+
+    <Tip>
+      On Windows, uncomment the lines by removing the `;` prefix. On Linux/Mac, these extensions are usually enabled by default.
+    </Tip>
+  </Step>
+
+  <Step title="Configure upload limits">
+    To support video uploads, increase the upload size limits:
+
+    ```ini php.ini
+    post_max_size = 200M
+    upload_max_filesize = 200M
+    ```
+
+    <Warning>
+      After modifying `php.ini`, restart your web server for changes to take effect.
+    </Warning>
+  </Step>
+</Steps>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the AnimeThemes Server repository from GitHub:
+
+    ```bash Terminal
+    git clone git@github.com:AnimeThemes/animethemes-server.git
+    cd animethemes-server
+    ```
+
+    <Info>
+      If you don't have SSH keys set up with GitHub, use HTTPS instead:
+      ```bash
+      git clone https://github.com/AnimeThemes/animethemes-server.git
+      ```
+    </Info>
+  </Step>
+
+  <Step title="Create the database">
+    Create a MySQL database for AnimeThemes:
+
+    ```bash Terminal
+    mysql -h localhost -u root -p -e "CREATE DATABASE IF NOT EXISTS \`animethemes\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    ```
+
+    When prompted, enter your MySQL root password.
+
+    <Note>
+      The database uses `utf8mb4_unicode_ci` collation to support international characters and emoji.
+    </Note>
+  </Step>
+
+  <Step title="Install dependencies and set up">
+    Run the automated setup command to install dependencies, configure the environment, and seed the database:
+
+    ```bash Terminal
+    composer setup
+    ```
+
+    This command performs the following actions:
+    - Installs PHP dependencies via Composer
+    - Copies `.env.example` to `.env` if it doesn't exist
+    - Generates an application key
+    - Runs database migrations
+    - Seeds the database with initial data
+    - Optimizes the application
+
+    <Tip>
+      The setup process may take several minutes depending on your system and internet connection.
+    </Tip>
+  </Step>
+
+  <Step title="Configure environment variables">
+    Open the `.env` file and configure your environment:
+
+    ```bash .env
+    # Application
+    APP_NAME=AnimeThemes
+    APP_ENV=local
+    APP_DEBUG=true
+    APP_URL=http://animethemes.test
+
+    # Database
+    DB_CONNECTION=mysql_prod
+    DB_HOST_READ=127.0.0.1
+    DB_HOST_WRITE=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=animethemes
+    DB_USERNAME=root
+    DB_PASSWORD=your_password_here
+
+    # API
+    API_PATH=/api
+    API_URL=http://animethemes.test/api
+
+    # GraphQL
+    GRAPHQL_PATH=/graphql
+    GRAPHQL_URL=http://animethemes.test/graphql
+    GRAPHIQL_ENABLED=true
+
+    # Admin Panel
+    FILAMENT_PATH=admin
+    FILAMENT_URL=http://animethemes.test/admin
+    ```
+
+    <Warning>
+      Never commit your `.env` file to version control. It contains sensitive credentials.
+    </Warning>
+  </Step>
+</Steps>
+
+## Web server configuration
+
+Choose your preferred web server setup:
+
+<Tabs>
+  <Tab title="Laravel Herd">
+    Laravel Herd provides the simplest setup experience:
+
+    <Steps>
+      <Step title="Install Laravel Herd">
+        Download and install [Laravel Herd](https://herd.laravel.com) for your operating system.
+      </Step>
+
+      <Step title="Link the project">
+        In your project directory, run:
+
+        ```bash Terminal
+        herd link animethemes.test
+        ```
+
+        This creates a local domain for your application.
+      </Step>
+
+      <Step title="Access the application">
+        Visit `http://animethemes.test` in your browser.
+
+        <Info>
+          Herd automatically serves your application on port 80 and handles PHP execution.
+        </Info>
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Apache">
+    Configure Apache to serve the application:
+
+    <Steps>
+      <Step title="Create virtual host">
+        Create a new virtual host configuration file:
+
+        ```apache /etc/apache2/sites-available/animethemes.conf
+        <VirtualHost *:80>
+            ServerName animethemes.test
+            DocumentRoot /path/to/animethemes-server/public
+
+            <Directory /path/to/animethemes-server/public>
+                AllowOverride All
+                Require all granted
+            </Directory>
+
+            ErrorLog ${APACHE_LOG_DIR}/animethemes_error.log
+            CustomLog ${APACHE_LOG_DIR}/animethemes_access.log combined
+        </VirtualHost>
+        ```
+      </Step>
+
+      <Step title="Enable the site">
+        Enable the virtual host and rewrite module:
+
+        ```bash Terminal
+        sudo a2ensite animethemes.conf
+        sudo a2enmod rewrite
+        sudo systemctl restart apache2
+        ```
+      </Step>
+
+      <Step title="Add to hosts file">
+        Add the domain to `/etc/hosts`:
+
+        ```text /etc/hosts
+        127.0.0.1 animethemes.test
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Nginx">
+    Configure Nginx to serve the application:
+
+    <Steps>
+      <Step title="Create server block">
+        Create an Nginx server block:
+
+        ```nginx /etc/nginx/sites-available/animethemes
+        server {
+            listen 80;
+            server_name animethemes.test;
+            root /path/to/animethemes-server/public;
+
+            add_header X-Frame-Options "SAMEORIGIN";
+            add_header X-Content-Type-Options "nosniff";
+
+            index index.php;
+
+            charset utf-8;
+
+            location / {
+                try_files $uri $uri/ /index.php?$query_string;
+            }
+
+            location = /favicon.ico { access_log off; log_not_found off; }
+            location = /robots.txt  { access_log off; log_not_found off; }
+
+            error_page 404 /index.php;
+
+            location ~ \.php$ {
+                fastcgi_pass unix:/var/run/php/php8.5-fpm.sock;
+                fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+                include fastcgi_params;
+            }
+
+            location ~ /\.(?!well-known).* {
+                deny all;
+            }
+        }
+        ```
+      </Step>
+
+      <Step title="Enable the site">
+        Enable the site and restart Nginx:
+
+        ```bash Terminal
+        sudo ln -s /etc/nginx/sites-available/animethemes /etc/nginx/sites-enabled/
+        sudo nginx -t
+        sudo systemctl restart nginx
+        ```
+      </Step>
+
+      <Step title="Add to hosts file">
+        Add the domain to `/etc/hosts`:
+
+        ```text /etc/hosts
+        127.0.0.1 animethemes.test
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Local storage configuration
+
+By default, AnimeThemes stores media files locally. Configure local storage disks in your `.env` file:
+
+```bash .env
+# Audio storage
+AUDIO_DISK_DEFAULT=audios_local
+AUDIO_DISKS=audios_local
+AUDIO_DISK_ROOT=  # Optional: specify custom directory
+
+# Video storage
+VIDEO_DISK_DEFAULT=videos_local
+VIDEO_DISKS=videos_local
+VIDEO_DISK_ROOT=  # Optional: specify custom directory
+
+# Image storage
+IMAGE_DISK=images_local
+IMAGE_DISK_ROOT=  # Optional: specify custom directory
+
+# Database dumps
+DUMP_DISK=dumps_local
+DUMP_DISK_ROOT=  # Optional: specify custom directory
+
+# Scripts
+SCRIPT_DISK=scripts_local
+SCRIPT_DISK_ROOT=  # Optional: specify custom directory
+```
+
+Create symbolic links to make storage directories accessible:
+
+```bash Terminal
+php artisan storage:link
+```
+
+<Tip>
+  If you store media files in an external directory, set the `*_DISK_ROOT` variables to the full path. Add a `.gitignore` file in the media directory to prevent Git from indexing large files.
+</Tip>
+
+## Create an admin user
+
+To access the admin panel, create a user with admin privileges:
+
+<Steps>
+  <Step title="Open Laravel Tinker">
+    ```bash Terminal
+    php artisan tinker
+    ```
+  </Step>
+
+  <Step title="Create the user">
+    ```php Tinker
+    $user = User::factory()->create([
+        'name' => 'Admin User',
+        'email' => 'admin@example.com',
+        'password' => 'password',
+        'email_verified_at' => now()
+    ]);
+    ```
+  </Step>
+
+  <Step title="Assign admin role">
+    ```php Tinker
+    $user->assignRole('Admin');
+    ```
+
+    <Info>
+      The Admin role grants full permissions to all resources and actions.
+    </Info>
+  </Step>
+
+  <Step title="Exit Tinker">
+    Press `Ctrl+C` or type `exit` to leave Tinker.
+  </Step>
+</Steps>
+
+You can now log in to the admin panel at `http://animethemes.test/admin` with your credentials.
+
+## Optional: Elasticsearch setup
+
+For advanced search capabilities, configure Elasticsearch:
+
+<Steps>
+  <Step title="Install Elasticsearch">
+    Follow the [Elasticsearch installation guide](https://www.elastic.co/guide/en/elasticsearch/reference/current/install-elasticsearch.html) for your platform.
+  </Step>
+
+  <Step title="Configure connection">
+    Update your `.env` file:
+
+    ```bash .env
+    SCOUT_DRIVER=elastic
+    ELASTIC_HOST=http://localhost:9200
+    ELASTIC_CONNECTION=default
+    ```
+  </Step>
+
+  <Step title="Run migrations">
+    Create Elasticsearch indices:
+
+    ```bash Terminal
+    php artisan elastic:migrate
+    ```
+  </Step>
+
+  <Step title="Import models">
+    Seed the indices with existing data:
+
+    ```bash Terminal
+    php artisan db:seed --class="Database\Seeders\Scout\ImportModelsSeeder"
+    ```
+
+    <Warning>
+      This process may take several minutes for large datasets.
+    </Warning>
+  </Step>
+</Steps>
+
+## Verification
+
+Verify your installation is working correctly:
+
+<AccordionGroup>
+  <Accordion icon="globe" title="Test the web interface">
+    Visit `http://animethemes.test` in your browser. You should see the AnimeThemes homepage.
+  </Accordion>
+
+  <Accordion icon="code" title="Test the REST API">
+    Make a request to the API:
+
+    ```bash Terminal
+    curl http://animethemes.test/api/anime
+    ```
+
+    You should receive a JSON response with anime data.
+  </Accordion>
+
+  <Accordion icon="diagram-project" title="Test GraphQL">
+    Visit `http://animethemes.test/graphql` to access GraphiQL, the GraphQL IDE.
+
+    Try this query:
+    ```graphql
+    {
+      anime(first: 5) {
+        data {
+          name
+          year
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion icon="shield" title="Test the admin panel">
+    Visit `http://animethemes.test/admin` and log in with your admin credentials.
+
+    You should be able to access the resource management interface.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="triangle-exclamation" title="500 Internal Server Error">
+    Check the Laravel logs:
+
+    ```bash Terminal
+    tail -f storage/logs/laravel.log
+    ```
+
+    Common causes:
+    - Missing `.env` file: Run `cp .env.example .env`
+    - Missing application key: Run `php artisan key:generate`
+    - Incorrect file permissions: Run `chmod -R 775 storage bootstrap/cache`
+  </Accordion>
+
+  <Accordion icon="database" title="Database connection errors">
+    Verify your database credentials in `.env`:
+    - Check `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD`
+    - Ensure MySQL is running: `sudo systemctl status mysql`
+    - Test the connection: `php artisan db:show`
+  </Accordion>
+
+  <Accordion icon="box" title="Composer errors">
+    If Composer fails to install dependencies:
+    - Update Composer: `composer self-update`
+    - Clear Composer cache: `composer clear-cache`
+    - Install with verbose output: `composer install -vvv`
+  </Accordion>
+
+  <Accordion icon="lock" title="Permission denied errors">
+    Ensure the web server has write permissions:
+
+    ```bash Terminal
+    sudo chown -R www-data:www-data storage bootstrap/cache
+    sudo chmod -R 775 storage bootstrap/cache
+    ```
+
+    Replace `www-data` with your web server user if different.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Feature flags" icon="flag" href="/advanced/feature-flags">
+    Enable or disable features like video streaming and search
+  </Card>
+  <Card title="Environment configuration" icon="gear" href="/advanced/environment">
+    Learn about all available environment variables
+  </Card>
+  <Card title="Admin panel" icon="shield" href="/advanced/admin-panel">
+    Explore the Filament admin interface
+  </Card>
+  <Card title="Contributing" icon="code-branch" href="/advanced/contributing">
+    Contribute to AnimeThemes Server development
+  </Card>
+</CardGroup>

@@ -1,0 +1,353 @@
+---
+title: 'Database Dumps'
+description: 'Manage and download database dump files'
+---
+
+## Overview
+
+The Database Dumps API allows administrators to manage database dump files, making them available for download. This is useful for backups, data analysis, or sharing dataset snapshots with the community.
+
+<Warning>
+  All database dump endpoints require administrator authentication and permissions.
+</Warning>
+
+## Authentication
+
+All endpoints require:
+- Valid authentication token
+- Administrator role/permissions
+- Bearer token in Authorization header
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+## Dump Structure
+
+Database dumps contain the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dump_id` | integer | Unique identifier for the dump |
+| `path` | string | File path to the dump file |
+| `public` | boolean | Whether the dump is publicly accessible |
+| `link` | string | Download URL for the dump (auto-generated) |
+| `created_at` | datetime | When the dump was created |
+| `updated_at` | datetime | When the dump record was last updated |
+
+## Endpoints
+
+### List Dumps
+
+Get a paginated list of public database dumps.
+
+```http
+GET /api/admin/dump
+```
+
+<Note>
+  By default, this endpoint returns only public dumps (where `public` is `true`).
+</Note>
+
+**Query Parameters:**
+- Standard pagination and filtering parameters
+- Supports field selection and includes
+
+**Example Response:**
+```json
+{
+  "dumps": [
+    {
+      "dump_id": 1,
+      "path": "dumps/animethemes-2026-03-01.sql.gz",
+      "public": true,
+      "link": "https://api.animethemes.moe/dump/1",
+      "created_at": "2026-03-01T00:00:00.000000Z",
+      "updated_at": "2026-03-01T00:00:00.000000Z"
+    },
+    {
+      "dump_id": 2,
+      "path": "dumps/animethemes-2026-02-01.sql.gz",
+      "public": true,
+      "link": "https://api.animethemes.moe/dump/2",
+      "created_at": "2026-02-01T00:00:00.000000Z",
+      "updated_at": "2026-02-01T00:00:00.000000Z"
+    }
+  ]
+}
+```
+
+### Create Dump
+
+Register a new database dump file.
+
+```http
+POST /api/admin/dump
+```
+
+<Note>
+  This endpoint registers a dump file in the system. The actual database dump file must be created separately using database backup tools.
+</Note>
+
+**Request Body:**
+```json
+{
+  "path": "dumps/animethemes-2026-03-03.sql.gz",
+  "public": true
+}
+```
+
+**Required Fields:**
+- `path` - File path to the dump file
+- `public` - Whether the dump should be publicly accessible
+
+**Example Response:**
+```json
+{
+  "dump": {
+    "dump_id": 3,
+    "path": "dumps/animethemes-2026-03-03.sql.gz",
+    "public": true,
+    "link": "https://api.animethemes.moe/dump/3",
+    "created_at": "2026-03-03T12:00:00.000000Z",
+    "updated_at": "2026-03-03T12:00:00.000000Z"
+  }
+}
+```
+
+### Get Dump
+
+Retrieve information about a specific dump.
+
+```http
+GET /api/admin/dump/{id}
+```
+
+**Path Parameters:**
+- `id` - The dump ID
+
+**Example Response:**
+```json
+{
+  "dump": {
+    "dump_id": 1,
+    "path": "dumps/animethemes-2026-03-01.sql.gz",
+    "public": true,
+    "link": "https://api.animethemes.moe/dump/1",
+    "created_at": "2026-03-01T00:00:00.000000Z",
+    "updated_at": "2026-03-01T00:00:00.000000Z"
+  }
+}
+```
+
+### Update Dump
+
+Update dump metadata (typically to change visibility).
+
+```http
+PUT /api/admin/dump/{id}
+```
+
+**Path Parameters:**
+- `id` - The dump ID
+
+**Request Body:**
+```json
+{
+  "public": false
+}
+```
+
+**Example Response:**
+```json
+{
+  "dump": {
+    "dump_id": 1,
+    "path": "dumps/animethemes-2026-03-01.sql.gz",
+    "public": false,
+    "link": "https://api.animethemes.moe/dump/1",
+    "created_at": "2026-03-01T00:00:00.000000Z",
+    "updated_at": "2026-03-03T12:00:00.000000Z"
+  }
+}
+```
+
+### Delete Dump
+
+Permanently delete a dump record.
+
+```http
+DELETE /api/admin/dump/{id}
+```
+
+**Path Parameters:**
+- `id` - The dump ID
+
+<Warning>
+  This operation permanently deletes the dump record. It does not delete the actual file from storage.
+</Warning>
+
+**Example Response:**
+```json
+{
+  "message": "The Dump 'dumps/animethemes-2026-03-01.sql.gz' was deleted."
+}
+```
+
+## Downloading Dumps
+
+To download a dump file, users can access the `link` URL provided in the dump record:
+
+```bash
+# Get the download link
+curl -X GET https://api.animethemes.moe/api/admin/dump/1 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Download using the link
+curl -O https://api.animethemes.moe/dump/1
+```
+
+The download route is publicly accessible for dumps marked as `public: true`.
+
+## Usage Examples
+
+### Register a New Monthly Dump
+
+```bash
+curl -X POST https://api.animethemes.moe/api/admin/dump \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "dumps/animethemes-2026-03-01.sql.gz",
+    "public": true
+  }'
+```
+
+### Make a Dump Private
+
+```bash
+curl -X PUT https://api.animethemes.moe/api/admin/dump/1 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "public": false
+  }'
+```
+
+### List All Available Dumps
+
+```bash
+curl -X GET https://api.animethemes.moe/api/admin/dump \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### Delete an Old Dump Record
+
+```bash
+curl -X DELETE https://api.animethemes.moe/api/admin/dump/5 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+## Dump Types
+
+Database dumps typically come in different formats:
+
+<AccordionGroup>
+  <Accordion title="Full Database Dumps">
+    Complete snapshots of the entire database, usually generated monthly.
+    
+    **Naming convention:** `animethemes-YYYY-MM-DD.sql.gz`
+    
+    These dumps contain all tables and data for a complete restore.
+  </Accordion>
+
+  <Accordion title="Incremental Dumps">
+    Dumps containing only changes since the last full dump.
+    
+    Useful for reducing file size and transfer time for regular backups.
+  </Accordion>
+
+  <Accordion title="Table-Specific Dumps">
+    Dumps of specific tables for targeted data exports.
+    
+    Example: `animethemes-wiki-2026-03.sql.gz` for wiki tables only.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Regular Backup Schedule">
+    Create dumps on a regular schedule (e.g., monthly) to ensure data is backed up consistently. Use automated scripts with the API to register new dumps.
+  </Accordion>
+
+  <Accordion title="Retention Policy">
+    Implement a retention policy to manage storage:
+    - Keep last 12 monthly dumps
+    - Keep last 4 weekly dumps
+    - Delete dumps older than 1 year
+  </Accordion>
+
+  <Accordion title="Verify Dump Files">
+    Before registering a dump via the API, verify the dump file:
+    - Check file integrity
+    - Verify file size is reasonable
+    - Test restoration in a development environment
+  </Accordion>
+
+  <Accordion title="Public vs Private">
+    Consider which dumps should be public:
+    - **Public:** Anonymized datasets, historical data, community releases
+    - **Private:** Recent dumps, dumps containing sensitive data, test dumps
+  </Accordion>
+
+  <Accordion title="Naming Conventions">
+    Use consistent naming conventions for dump files:
+    - Include date in ISO format (YYYY-MM-DD)
+    - Include dump type (full, incremental, specific tables)
+    - Use descriptive names: `animethemes-full-2026-03-01.sql.gz`
+  </Accordion>
+</AccordionGroup>
+
+## Creating Database Dumps
+
+While this API manages dump records, the actual dump files are created using database tools:
+
+```bash
+# Create a MySQL dump (example)
+mysqldump -u user -p database_name | gzip > dumps/animethemes-2026-03-03.sql.gz
+
+# Register the dump via API
+curl -X POST https://api.animethemes.moe/api/admin/dump \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "dumps/animethemes-2026-03-03.sql.gz",
+    "public": true
+  }'
+```
+
+<Note>
+  The API manages dump metadata and download links. The actual dump file creation and storage is handled separately by database backup tools and storage systems.
+</Note>
+
+## Security Considerations
+
+<Warning>
+  - Always review dumps for sensitive data before making them public
+  - Consider anonymizing user data in public dumps
+  - Use secure transfer methods (HTTPS) for downloading dumps
+  - Regularly audit who has access to dump endpoints
+  - Delete dump records for files that no longer exist in storage
+</Warning>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Database Dumps Guide" icon="database" href="/advanced/database-dumps">
+    Comprehensive guide to database dumps
+  </Card>
+  <Card title="Storage Configuration" icon="hard-drive" href="/advanced/storage">
+    Configure dump file storage
+  </Card>
+</CardGroup>

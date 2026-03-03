@@ -1,0 +1,304 @@
+---
+title: 'Feature Flags'
+description: 'Manage feature flags and toggle system features'
+---
+
+## Overview
+
+The Feature Flags API allows administrators to check and toggle feature flags that control various system behaviors and validations. Feature flags enable dynamic configuration without code deployments.
+
+<Warning>
+  All feature flag endpoints require administrator authentication and permissions. Modifying feature flags can significantly impact system behavior.
+</Warning>
+
+## Authentication
+
+All endpoints require:
+- Valid authentication token
+- Administrator role/permissions
+- Bearer token in Authorization header
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+## Feature Structure
+
+Features contain the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | integer | Unique identifier for the feature |
+| `name` | string | Feature flag name (immutable) |
+| `scope` | string | Feature scope (global scope is `__laravel_null`) |
+| `value` | string | Current feature value/state |
+| `created_at` | datetime | When the feature was created |
+| `updated_at` | datetime | When the feature was last modified |
+
+## Available Features
+
+The following feature flags are available in the system:
+
+| Feature Name | Description |
+|--------------|-------------|
+| `allow_discord_notifications` | Enable/disable Discord notification integration |
+| `audio_bitrate_restriction` | Set audio bitrate validation requirements |
+| `enabled_only_on_localhost` | Restrict certain features to localhost only |
+| `ignore_all_file_validations` | Bypass all file validation checks |
+| `required_encoder_version` | Specify required encoder version for uploads |
+| `video_bitrate_restriction` | Set video bitrate validation requirements |
+| `video_codec_stream` | Specify allowed video codec |
+| `video_color_primaries_stream` | Specify required color primaries |
+| `video_color_space_stream` | Specify required color space |
+| `video_color_transfer_stream` | Specify required color transfer characteristics |
+| `video_pixel_format_stream` | Specify required pixel format |
+
+## Endpoints
+
+### List Features
+
+Get a list of all global feature flags.
+
+```http
+GET /api/admin/feature
+```
+
+<Note>
+  This endpoint only returns features with global scope (`__laravel_null`).
+</Note>
+
+**Query Parameters:**
+- Standard pagination and filtering parameters
+- Supports field selection and includes
+
+**Example Response:**
+```json
+{
+  "features": [
+    {
+      "feature_id": 1,
+      "name": "allow_discord_notifications",
+      "scope": "__laravel_null",
+      "value": "true",
+      "created_at": "2026-01-01T00:00:00.000000Z",
+      "updated_at": "2026-02-15T10:30:00.000000Z"
+    },
+    {
+      "feature_id": 2,
+      "name": "ignore_all_file_validations",
+      "scope": "__laravel_null",
+      "value": "false",
+      "created_at": "2026-01-01T00:00:00.000000Z",
+      "updated_at": "2026-01-01T00:00:00.000000Z"
+    },
+    {
+      "feature_id": 3,
+      "name": "video_codec_stream",
+      "scope": "__laravel_null",
+      "value": "h264",
+      "created_at": "2026-01-01T00:00:00.000000Z",
+      "updated_at": "2026-01-20T14:22:00.000000Z"
+    }
+  ]
+}
+```
+
+### Get Feature
+
+Retrieve a specific feature flag by ID.
+
+```http
+GET /api/admin/feature/{id}
+```
+
+**Path Parameters:**
+- `id` - The feature ID
+
+**Example Response:**
+```json
+{
+  "feature": {
+    "feature_id": 1,
+    "name": "allow_discord_notifications",
+    "scope": "__laravel_null",
+    "value": "true",
+    "created_at": "2026-01-01T00:00:00.000000Z",
+    "updated_at": "2026-02-15T10:30:00.000000Z"
+  }
+}
+```
+
+### Update Feature
+
+Update a feature flag's value.
+
+```http
+PUT /api/admin/feature/{id}
+```
+
+<Warning>
+  Only the `value` field can be updated. The `name` and `scope` fields are immutable.
+</Warning>
+
+**Path Parameters:**
+- `id` - The feature ID
+
+**Request Body:**
+```json
+{
+  "value": "false"
+}
+```
+
+**Example Response:**
+```json
+{
+  "feature": {
+    "feature_id": 1,
+    "name": "allow_discord_notifications",
+    "scope": "__laravel_null",
+    "value": "false",
+    "created_at": "2026-01-01T00:00:00.000000Z",
+    "updated_at": "2026-03-03T12:00:00.000000Z"
+  }
+}
+```
+
+## Usage Examples
+
+### Toggle a Boolean Feature
+
+```bash
+# Enable Discord notifications
+curl -X PUT https://api.animethemes.moe/api/admin/feature/1 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "value": "true"
+  }'
+```
+
+### Update Video Codec Requirement
+
+```bash
+# Set required video codec to h265
+curl -X PUT https://api.animethemes.moe/api/admin/feature/3 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "value": "h265"
+  }'
+```
+
+### Check Current Features
+
+```bash
+# List all features
+curl -X GET https://api.animethemes.moe/api/admin/feature \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+## Feature Value Types
+
+Feature values are stored as strings but represent different types:
+
+<AccordionGroup>
+  <Accordion title="Boolean Features">
+    Store as `"true"` or `"false"` strings.
+    
+    Examples:
+    - `allow_discord_notifications`
+    - `ignore_all_file_validations`
+    - `enabled_only_on_localhost`
+  </Accordion>
+
+  <Accordion title="String/Enum Features">
+    Store specific values like codec names or format specifications.
+    
+    Examples:
+    - `video_codec_stream`: `"h264"`, `"h265"`, etc.
+    - `video_pixel_format_stream`: `"yuv420p"`, etc.
+    - `video_color_space_stream`: `"bt709"`, etc.
+  </Accordion>
+
+  <Accordion title="Numeric Features">
+    Store numeric values as strings.
+    
+    Examples:
+    - `audio_bitrate_restriction`: `"320000"`
+    - `video_bitrate_restriction`: `"5000000"`
+    - `required_encoder_version`: `"1.2.3"`
+  </Accordion>
+</AccordionGroup>
+
+## Common Use Cases
+
+### Media Upload Validation
+
+Several features control video and audio file validation:
+
+```bash
+# Disable all file validations (for testing)
+curl -X PUT https://api.animethemes.moe/api/admin/feature/{id} \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"value": "true"}'
+
+# Set specific codec requirements
+curl -X PUT https://api.animethemes.moe/api/admin/feature/{codec_feature_id} \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"value": "h264"}'
+```
+
+### Integration Toggles
+
+Control external service integrations:
+
+```bash
+# Enable Discord notifications
+curl -X PUT https://api.animethemes.moe/api/admin/feature/{discord_feature_id} \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"value": "true"}'
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Test Before Production">
+    When changing feature flags, test in a non-production environment first, especially for validation-related features.
+  </Accordion>
+
+  <Accordion title="Document Changes">
+    Keep a log of feature flag changes and the reasons for modifications, as they can significantly impact system behavior.
+  </Accordion>
+
+  <Accordion title="Gradual Rollout">
+    For critical features, consider using scoped features (if available) to test changes with a subset of users before global deployment.
+  </Accordion>
+
+  <Accordion title="Monitor Impact">
+    After changing feature flags, monitor system metrics and error rates to ensure the change has the desired effect.
+  </Accordion>
+</AccordionGroup>
+
+## Limitations
+
+<Note>
+  - Feature flags cannot be created or deleted via the API
+  - Only the `value` field can be modified
+  - The API only exposes globally scoped features
+  - Feature name and scope are immutable
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Announcements" icon="megaphone" href="/api/admin/announcements">
+    Manage site announcements
+  </Card>
+  <Card title="Feature Flags Guide" icon="book" href="/advanced/feature-flags">
+    Learn about feature flags
+  </Card>
+</CardGroup>

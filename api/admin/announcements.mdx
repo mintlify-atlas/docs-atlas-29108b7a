@@ -1,0 +1,241 @@
+---
+title: 'Announcements'
+description: 'Manage site-wide announcements'
+---
+
+## Overview
+
+The Announcements API allows administrators to create, update, and manage site-wide announcements that are displayed to users during a specified time period.
+
+<Warning>
+  All announcement endpoints require administrator authentication and permissions.
+</Warning>
+
+## Authentication
+
+All endpoints require:
+- Valid authentication token
+- Administrator role/permissions
+- Bearer token in Authorization header
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+## Announcement Structure
+
+Announcements contain the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `announcement_id` | integer | Unique identifier for the announcement |
+| `content` | string | The announcement message content |
+| `start_at` | datetime | When the announcement becomes active |
+| `end_at` | datetime | When the announcement expires |
+| `created_at` | datetime | When the announcement was created |
+| `updated_at` | datetime | When the announcement was last updated |
+
+## Endpoints
+
+### List Announcements
+
+Get a paginated list of current announcements.
+
+```http
+GET /api/admin/announcement
+```
+
+<Note>
+  By default, this endpoint returns only current announcements (where the current time is between `start_at` and `end_at`).
+</Note>
+
+**Query Parameters:**
+- Standard pagination and filtering parameters
+- Supports field selection and includes
+
+**Example Response:**
+```json
+{
+  "announcements": [
+    {
+      "announcement_id": 1,
+      "content": "Scheduled maintenance on March 15th from 2-4 AM UTC",
+      "start_at": "2026-03-01T00:00:00.000000Z",
+      "end_at": "2026-03-15T04:00:00.000000Z",
+      "created_at": "2026-02-28T10:30:00.000000Z",
+      "updated_at": "2026-02-28T10:30:00.000000Z"
+    }
+  ]
+}
+```
+
+### Create Announcement
+
+Create a new announcement.
+
+```http
+POST /api/admin/announcement
+```
+
+**Request Body:**
+```json
+{
+  "content": "New feature released: Advanced search filters!",
+  "start_at": "2026-03-03T00:00:00Z",
+  "end_at": "2026-03-10T23:59:59Z"
+}
+```
+
+**Required Fields:**
+- `content` - The announcement message
+- `start_at` - Start date/time for the announcement
+- `end_at` - End date/time for the announcement
+
+**Example Response:**
+```json
+{
+  "announcement": {
+    "announcement_id": 2,
+    "content": "New feature released: Advanced search filters!",
+    "start_at": "2026-03-03T00:00:00.000000Z",
+    "end_at": "2026-03-10T23:59:59.000000Z",
+    "created_at": "2026-03-03T12:00:00.000000Z",
+    "updated_at": "2026-03-03T12:00:00.000000Z"
+  }
+}
+```
+
+### Get Announcement
+
+Retrieve a specific announcement by ID.
+
+```http
+GET /api/admin/announcement/{id}
+```
+
+**Path Parameters:**
+- `id` - The announcement ID
+
+**Example Response:**
+```json
+{
+  "announcement": {
+    "announcement_id": 1,
+    "content": "Scheduled maintenance on March 15th from 2-4 AM UTC",
+    "start_at": "2026-03-01T00:00:00.000000Z",
+    "end_at": "2026-03-15T04:00:00.000000Z",
+    "created_at": "2026-02-28T10:30:00.000000Z",
+    "updated_at": "2026-02-28T10:30:00.000000Z"
+  }
+}
+```
+
+### Update Announcement
+
+Update an existing announcement.
+
+```http
+PUT /api/admin/announcement/{id}
+```
+
+**Path Parameters:**
+- `id` - The announcement ID
+
+**Request Body:**
+```json
+{
+  "content": "Updated: Maintenance rescheduled to March 16th",
+  "start_at": "2026-03-01T00:00:00Z",
+  "end_at": "2026-03-16T04:00:00Z"
+}
+```
+
+**Example Response:**
+```json
+{
+  "announcement": {
+    "announcement_id": 1,
+    "content": "Updated: Maintenance rescheduled to March 16th",
+    "start_at": "2026-03-01T00:00:00.000000Z",
+    "end_at": "2026-03-16T04:00:00.000000Z",
+    "created_at": "2026-02-28T10:30:00.000000Z",
+    "updated_at": "2026-03-03T14:00:00.000000Z"
+  }
+}
+```
+
+### Delete Announcement
+
+Permanently delete an announcement.
+
+```http
+DELETE /api/admin/announcement/{id}
+```
+
+**Path Parameters:**
+- `id` - The announcement ID
+
+<Warning>
+  This operation permanently deletes the announcement and cannot be undone.
+</Warning>
+
+**Example Response:**
+```json
+{
+  "message": "The Announcement '1' was deleted."
+}
+```
+
+## Usage Examples
+
+### Creating a Maintenance Announcement
+
+```bash
+curl -X POST https://api.animethemes.moe/api/admin/announcement \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Scheduled maintenance: The site will be down for 2 hours starting at 2 AM UTC",
+    "start_at": "2026-03-15T00:00:00Z",
+    "end_at": "2026-03-15T04:00:00Z"
+  }'
+```
+
+### Updating an Announcement
+
+```bash
+curl -X PUT https://api.animethemes.moe/api/admin/announcement/1 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Maintenance window extended by 1 hour",
+    "end_at": "2026-03-15T05:00:00Z"
+  }'
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Timing Announcements">
+    Set `start_at` slightly before the actual event to ensure users see the announcement in advance. For maintenance, consider starting the announcement 24-48 hours early.
+  </Accordion>
+
+  <Accordion title="Clear Messaging">
+    Keep announcement content concise and actionable. Include specific times with timezone information (UTC recommended).
+  </Accordion>
+
+  <Accordion title="Cleanup">
+    Regularly delete expired announcements to keep the database clean. Consider setting up automated cleanup for announcements older than 30 days past their `end_at` date.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Feature Flags" icon="flag" href="/api/admin/features">
+    Manage feature toggles
+  </Card>
+  <Card title="Database Dumps" icon="database" href="/api/admin/dumps">
+    Download database backups
+  </Card>
+</CardGroup>

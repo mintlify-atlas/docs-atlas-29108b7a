@@ -1,0 +1,567 @@
+---
+title: System Architecture
+description: Technical architecture and design patterns of AnimeThemes Server
+---
+
+## Overview
+
+AnimeThemes Server is a Laravel-based application that provides resource management and a comprehensive API for the AnimeThemes.moe platform. The architecture follows Laravel best practices and modern PHP development patterns.
+
+## Technology Stack
+
+### Core Framework
+- **Laravel 12.x**: PHP web application framework
+- **PHP 8.5**: Modern PHP with strict typing
+- **MySQL 8+**: Primary database
+
+### Key Packages
+- **Filament 5.x**: Admin panel framework
+- **GraphQL (rebing/graphql-laravel)**: GraphQL API layer
+- **Laravel Scout**: Full-text search integration
+- **Elasticsearch**: Search engine via Scout
+- **Laravel Horizon**: Queue monitoring
+- **Laravel Sanctum**: API authentication
+- **Spatie Permissions**: Role-based access control
+
+### Development Tools
+- **Pest PHP**: Testing framework
+- **Laravel Pint**: Code style fixer
+- **PHPStan (Larastan)**: Static analysis
+- **Rector**: Automated refactoring
+
+## Directory Structure
+
+```
+animethemes-server/
+├── app/                    # Application code
+│   ├── Actions/           # Single-purpose action classes
+│   ├── Concerns/          # Reusable traits
+│   ├── Console/           # Artisan commands
+│   ├── Constants/         # Configuration constants
+│   ├── Contracts/         # Interfaces
+│   ├── Discord/           # Discord integration
+│   ├── Enums/             # Typed enumerations
+│   ├── Events/            # Event classes
+│   ├── Exceptions/        # Custom exceptions
+│   ├── Features/          # Feature flags (Pennant)
+│   ├── Filament/          # Admin panel resources
+│   ├── GraphQL/           # GraphQL schemas & resolvers
+│   ├── Http/              # HTTP layer
+│   │   ├── Api/           # API controllers
+│   │   ├── Middleware/    # HTTP middleware
+│   │   └── Resources/     # API resources
+│   ├── Jobs/              # Queue jobs
+│   ├── Listeners/         # Event listeners
+│   ├── Models/            # Eloquent models
+│   │   ├── Admin/         # Admin models
+│   │   ├── Auth/          # User models
+│   │   ├── Document/      # Documentation models
+│   │   ├── List/          # Playlist models
+│   │   └── Wiki/          # Core wiki models
+│   ├── Notifications/     # Notification classes
+│   ├── Observers/         # Model observers
+│   ├── Pivots/            # Pivot models
+│   ├── Policies/          # Authorization policies
+│   ├── Providers/         # Service providers
+│   ├── Repositories/      # Data repositories
+│   ├── Rules/             # Validation rules
+│   ├── Scopes/            # Query scopes
+│   ├── Scout/             # Search builders
+│   └── Search/            # Search parsers
+├── bootstrap/             # Framework bootstrap
+├── config/                # Configuration files
+├── database/              # Database files
+│   ├── factories/         # Model factories
+│   ├── migrations/        # Database migrations
+│   └── seeders/           # Database seeders
+├── elastic/               # Elasticsearch migrations
+├── public/                # Public web root
+├── resources/             # Views, assets
+├── routes/                # Route definitions
+│   ├── api.php           # REST API routes
+│   ├── graphql.php       # GraphQL routes
+│   ├── web.php           # Web routes
+│   ├── video.php         # Video streaming
+│   ├── audio.php         # Audio streaming
+│   └── ...
+├── storage/               # Application storage
+├── tests/                 # Test suites
+│   ├── Feature/          # Integration tests
+│   └── Unit/             # Unit tests
+└── vendor/                # Composer dependencies
+```
+
+## Core Architecture Patterns
+
+### MVC Pattern
+
+The application follows the Model-View-Controller pattern:
+
+**Models** (`app/Models/`): Eloquent ORM models representing database entities
+```php
+// app/Models/Wiki/Video.php
+class Video extends Model
+{
+    use HasFactory, SoftDeletes;
+    
+    protected $fillable = ['basename', 'filename', 'path', ...];
+    
+    public function animethemeentries(): BelongsToMany
+    {
+        return $this->belongsToMany(AnimeThemeEntry::class);
+    }
+}
+```
+
+**Controllers** (`app/Http/Controllers/`): Handle HTTP requests
+```php
+// app/Http/Controllers/Api/Wiki/VideoController.php
+class VideoController extends Controller
+{
+    public function show(Video $video): VideoJsonResource
+    {
+        return new VideoJsonResource($video, new Query());
+    }
+}
+```
+
+**Resources** (`app/Http/Resources/`): Transform models to JSON
+```php
+// app/Http/Resources/Wiki/Resource/VideoJsonResource.php
+class VideoJsonResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        return [
+            'id' => $this->id,
+            'basename' => $this->basename,
+            // ...
+        ];
+    }
+}
+```
+
+### Repository Pattern
+
+Repositories encapsulate data access logic:
+
+```php
+// app/Repositories/
+class VideoRepository
+{
+    public function findByBasename(string $basename): ?Video
+    {
+        return Video::where('basename', $basename)->first();
+    }
+}
+```
+
+### Action Pattern
+
+Single-purpose action classes for complex operations:
+
+```php
+// app/Actions/
+class ProcessVideoUpload
+{
+    public function handle(UploadedFile $file): Video
+    {
+        // Video processing logic
+    }
+}
+```
+
+### Observer Pattern
+
+Model observers handle lifecycle events:
+
+```php
+// app/Observers/VideoObserver.php
+class VideoObserver
+{
+    public function creating(Video $video): void
+    {
+        // Set defaults before creation
+    }
+    
+    public function forceDeleting(Video $video): void
+    {
+        // Clean up storage files
+    }
+}
+```
+
+## Data Model
+
+### Core Entities
+
+**Wiki Domain** (`app/Models/Wiki/`):
+- **Anime**: Anime series information
+- **AnimeTheme**: Opening/ending themes
+- **AnimeThemeEntry**: Theme variants
+- **Video**: Video files
+- **Audio**: Audio files
+- **Artist**: Music artists
+- **Song**: Music compositions
+- **Studio**: Animation studios
+- **Series**: Anime series groupings
+- **Image**: Cover art and images
+- **ExternalResource**: Links to external sites
+
+**User Domain** (`app/Models/Auth/`):
+- **User**: Application users
+- **Role**: User roles
+- **Permission**: Access permissions
+
+**List Domain** (`app/Models/List/`):
+- **Playlist**: User playlists
+- **PlaylistTrack**: Playlist entries
+- **ExternalProfile**: MyAnimeList/AniList profiles
+
+### Relationships
+
+The data model uses Laravel's Eloquent relationships:
+
+**One-to-Many**:
+```php
+// An anime has many themes
+Anime → hasMany(AnimeTheme)
+
+// A theme has many entries
+AnimeTheme → hasMany(AnimeThemeEntry)
+```
+
+**Many-to-Many**:
+```php
+// Videos belong to many entries (pivot: AnimeThemeEntryVideo)
+Video ↔ AnimeThemeEntry
+
+// Artists perform many songs (pivot: ArtistSong)
+Artist ↔ Song
+
+// Artists can be members of groups (pivot: ArtistMember)
+Artist ↔ Artist (self-referential)
+```
+
+**Polymorphic**:
+```php
+// Images can belong to anime, artists, etc.
+Image → morphTo(Imageable)
+
+// External resources for various models
+ExternalResource → morphTo(Resourceable)
+```
+
+## API Architecture
+
+### REST API
+
+**Route Structure** (`routes/api.php`):
+```
+/api/video                    # Video collection
+/api/video/{video}            # Video resource
+/api/anime                    # Anime collection
+/api/anime/{anime}            # Anime resource
+/api/anime/{anime}/theme      # Nested themes
+```
+
+**Features**:
+- **Filtering**: Query parameters for filtering results
+- **Sorting**: Order results by fields
+- **Pagination**: Cursor and page-based pagination
+- **Field Selection**: Sparse fieldsets
+- **Includes**: Related resource loading
+- **Soft Deletes**: Restore and force delete operations
+
+**API Middleware**:
+- Rate limiting
+- Authentication (Sanctum)
+- CORS handling
+- Query validation
+
+### GraphQL API
+
+**Schema Location**: `app/GraphQL/schemas/`
+
+Provides an alternative query interface with:
+- Type-safe queries
+- Nested resource loading
+- Custom resolvers
+- Introspection support
+
+**Endpoint**: `/graphql`
+
+**GraphiQL Interface**: Available in development mode
+
+## Search Architecture
+
+### Elasticsearch Integration
+
+**Scout Drivers**: Custom Elasticsearch driver via `elastic-scout-driver-plus`
+
+**Searchable Models**:
+- Anime
+- Artist
+- Song
+- Video
+- And more...
+
+**Index Management**:
+```bash
+# Migrate indices
+php artisan elastic:migrate
+
+# Import models
+php artisan db:seed --class=ImportModelsSeeder
+```
+
+**Search Builders** (`app/Scout/`):
+- Custom query builders
+- Filter parsers
+- Sort parsers
+- Pagination parsers
+
+## Queue Architecture
+
+### Job Processing
+
+**Queue Driver**: Configurable (sync, database, Redis)
+
+**Job Categories** (`app/Jobs/`):
+- **Wiki Jobs**: Resource creation/updates
+- **Discord Jobs**: Notifications
+- **Admin Jobs**: Maintenance tasks
+- **Pivot Jobs**: Relationship management
+
+**Horizon**: Monitor queue health and job metrics at `/horizon`
+
+### Event-Driven Architecture
+
+**Events** (`app/Events/`):
+- Resource created/updated/deleted
+- User actions
+- System events
+
+**Listeners** (`app/Listeners/`):
+- Send notifications
+- Update search indices
+- Log activities
+- Dispatch follow-up jobs
+
+## Storage Architecture
+
+### Multi-Disk Strategy
+
+**Disk Configuration**:
+- **Local**: Development storage
+- **S3 (Multiple Regions)**: Production storage
+  - NYC (New York City) region
+  - FRA (Frankfurt) region
+
+**Media Types**:
+- **Videos**: WebM files, multiple quality levels
+- **Audio**: Opus audio files
+- **Images**: Cover art, thumbnails
+- **Scripts**: Video subtitle files
+- **Dumps**: Database exports
+
+**Streaming**:
+- Response-based streaming (default)
+- Nginx X-Accel-Redirect support for performance
+
+## Admin Panel
+
+### Filament Framework
+
+**Location**: `/admin` and `/submission`
+
+**Resources** (`app/Filament/Resources/`):
+- CRUD interfaces for all models
+- Custom forms and tables
+- Bulk actions
+- Filters and searches
+
+**Access Control**:
+- Role-based permissions via Spatie
+- Special permissions for admin features
+
+## Security Features
+
+### Authentication & Authorization
+
+**Sanctum**: Token-based API authentication
+
+**Fortify**: User authentication flows
+- Registration
+- Login
+- Password reset
+- Email verification
+
+**Policies** (`app/Policies/`): Fine-grained authorization
+
+### Additional Security
+
+**Secure Headers**: CSP, HSTS, and more via `bepsvpt/secure-headers`
+
+**Rate Limiting**: Per-endpoint and per-query limits
+
+**Input Validation**: Custom validation rules in `app/Rules/`
+
+**Moderation**: Configurable moderation services
+
+## Performance Optimization
+
+### Caching Strategy
+
+- **Query Caching**: Cache database results
+- **Route Caching**: Pre-compile routes
+- **Config Caching**: Optimize configuration loading
+- **View Caching**: Compiled Blade templates
+
+### Database Optimization
+
+- **Eager Loading**: Prevent N+1 queries
+- **Indexing**: Optimized database indices
+- **Read/Write Splitting**: Separate read/write connections
+
+### CDN Integration
+
+- **S3 Distribution**: Multi-region asset delivery
+- **Public URLs**: Direct S3 access for media
+
+## Deployment Architecture
+
+### Environment Configuration
+
+**Development** (`.env`):
+- Local storage
+- SQLite for testing
+- Debug mode enabled
+- Sync queue driver
+
+**Production** (`.env.production`):
+- S3 storage
+- MySQL with read replicas
+- Queue workers (Horizon)
+- Redis caching
+- Elasticsearch enabled
+
+### Database Migrations
+
+**Version Control**: All schema changes via migrations
+
+**Migration Commands**:
+```bash
+php artisan migrate              # Run migrations
+php artisan migrate:rollback     # Rollback last batch
+php artisan db:sync              # Custom sync command
+```
+
+## Monitoring & Logging
+
+### Laravel Pulse
+
+Real-time application metrics at `/pulse`
+
+### Logging
+
+**Channels**:
+- **Daily**: Rotating daily logs
+- **Stack**: Multiple channels
+- **Custom**: Discord notifications
+
+**Locations**:
+- `storage/logs/laravel.log`
+- External logging services (configurable)
+
+### Auditing
+
+**Laravel Auditing**: Track model changes
+- Who made changes
+- What was changed
+- When changes occurred
+
+## API Versioning
+
+Currently using implicit versioning via:
+- Route prefixes (`/api/`)
+- Resource transformers
+- Backward compatibility maintenance
+
+## External Integrations
+
+### Discord
+- Bot notifications
+- Database update announcements
+- Admin alerts
+
+### MyAnimeList & AniList
+- OAuth integration
+- Profile syncing
+- External entry management
+
+### Third-Party Services
+- **Mailgun**: Email delivery
+- **AWS S3**: Media storage
+- **Elasticsearch**: Search functionality
+
+## Development Patterns
+
+### Enums (PHP 8.1+)
+
+Type-safe enumerations in `app/Enums/`:
+```php
+enum VideoSource: int
+{
+    case WEB = 1;
+    case RAW = 2;
+    case BD = 3;
+    case DVD = 4;
+    
+    public function localize(): string
+    {
+        return match($this) {
+            self::BD => 'BD',
+            self::DVD => 'DVD',
+            default => '',
+        };
+    }
+}
+```
+
+### Strict Typing
+
+All files use `declare(strict_types=1);` for type safety.
+
+### Feature Flags
+
+**Laravel Pennant**: Toggle features without deployment
+```php
+if (Feature::active('allow-video-streams')) {
+    // Stream video
+}
+```
+
+## Scalability Considerations
+
+**Horizontal Scaling**:
+- Stateless application design
+- Session storage in database/Redis
+- Queue workers can run on multiple servers
+
+**Database Scaling**:
+- Read replicas supported
+- Connection pooling
+- Query optimization
+
+**Asset Delivery**:
+- S3 multi-region support
+- CDN-ready architecture
+- Lazy loading for resources
+
+## Further Reading
+
+- [Contributing Guidelines](/advanced/contributing)
+- [Testing Guide](/advanced/testing)
+- [Laravel Documentation](https://laravel.com/docs)
+- [GitHub Repository](https://github.com/AnimeThemes/animethemes-server)

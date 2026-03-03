@@ -1,0 +1,598 @@
+---
+title: Song Type
+description: GraphQL type definition and queries for song resources
+---
+
+The `Song` type represents the composition that accompanies an AnimeTheme. For example, "Staple Stable" is the song for the Bakemonogatari OP1 AnimeTheme.
+
+## Type Definition
+
+```graphql
+type Song {
+  # Identification
+  song_id: Int!
+  title: String
+  title_native: String
+  
+  # Timestamps
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+  
+  # Relationships
+  animethemes: [AnimeTheme!]!
+  performances: [Performance!]!
+  resources: [ExternalResource!]!
+}
+```
+
+## Fields
+
+### song_id
+
+Unique identifier for the song.
+
+- Type: `Int!`
+- Example: `1`
+
+### title
+
+The romanized or English title of the song.
+
+- Type: `String`
+- Example: `"Staple Stable"`
+
+Note: Title may be null if the song hasn't been identified yet.
+
+### title_native
+
+The native language title (typically Japanese).
+
+- Type: `String`
+- Example: `"staple stable"`
+
+## Relationships
+
+### animethemes
+
+The anime themes that use this song.
+
+```graphql
+{
+  song(song_id: 1) {
+    title
+    animethemes {
+      theme_id
+      slug
+      type
+      anime {
+        name
+        year
+      }
+    }
+  }
+}
+```
+
+Returns: `[AnimeTheme!]!`
+
+A single song may be used across multiple anime or multiple themes within the same anime.
+
+### performances
+
+Artists who performed this song.
+
+```graphql
+{
+  song(song_id: 1) {
+    title
+    performances {
+      performance_id
+      as
+      artist {
+        ... on Artist {
+          name
+        }
+        ... on Membership {
+          as
+          group {
+            name
+          }
+          member {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Returns: `[Performance!]!`
+
+Performances link songs to artists, including credit information.
+
+### resources
+
+External links for this song (Spotify, Apple Music, etc.).
+
+```graphql
+{
+  song(song_id: 1) {
+    title
+    resources {
+      site
+      link
+      external_id
+    }
+  }
+}
+```
+
+Returns: `[ExternalResource!]!`
+
+## Performance Type
+
+The `Performance` type represents an artist's work on a song.
+
+```graphql
+type Performance {
+  performance_id: Int!
+  song: Song!
+  artist: PerformanceArtist!
+  as: String
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+}
+
+union PerformanceArtist = Artist | Membership
+```
+
+### Performance Fields
+
+#### performance_id
+
+Unique identifier for the performance.
+
+- Type: `Int!`
+
+#### as
+
+The credited name for this performance.
+
+- Type: `String`
+- Example: `"Senjougahara Hitagi (CV: Chiwa Saitou)"`
+
+This field captures character credits, stage names, or special attributions.
+
+#### artist
+
+The performer (polymorphic).
+
+- Type: `PerformanceArtist!` (union of `Artist` or `Membership`)
+
+Can be either:
+- An `Artist` (individual or group performing directly)
+- A `Membership` (artist performing as part of a group)
+
+## Queries
+
+### Single Song
+
+Query a single song by ID.
+
+```graphql
+query GetSong($id: Int!) {
+  song(song_id: $id) {
+    song_id
+    title
+    title_native
+    performances {
+      as
+      artist {
+        ... on Artist {
+          name
+          slug
+        }
+      }
+    }
+    animethemes {
+      slug
+      anime {
+        name
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "id": 1
+}
+```
+
+### Song Pagination
+
+Query multiple songs with filtering.
+
+```graphql
+query ListSongs($page: Int, $first: Int) {
+  songPagination(
+    page: $page
+    first: $first
+    sort: [{ column: TITLE, direction: ASC }]
+  ) {
+    data {
+      song_id
+      title
+      title_native
+      performances {
+        as
+        artist {
+          ... on Artist {
+            name
+          }
+        }
+      }
+    }
+    pagination {
+      total
+      current_page
+      has_more_pages
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "page": 1,
+  "first": 25
+}
+```
+
+### Song with Full Credits
+
+Query song with complete artist information.
+
+```graphql
+query SongWithCredits($id: Int!) {
+  song(song_id: $id) {
+    title
+    title_native
+    performances {
+      as
+      artist {
+        ... on Artist {
+          artist_id
+          name
+          slug
+        }
+        ... on Membership {
+          membership_id
+          as
+          group {
+            name
+          }
+          member {
+            name
+          }
+        }
+      }
+    }
+    resources {
+      site
+      link
+    }
+  }
+}
+```
+
+### Songs for Anime
+
+Find all songs used in a specific anime.
+
+```graphql
+query AnimeSongs($animeId: Int!) {
+  anime(anime_id: $animeId) {
+    name
+    animethemes {
+      slug
+      type
+      song {
+        title
+        title_native
+        performances {
+          as
+          artist {
+            ... on Artist {
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Performance Pagination
+
+Query performances directly.
+
+```graphql
+query ListPerformances($page: Int, $first: Int) {
+  performancePagination(
+    page: $page
+    first: $first
+  ) {
+    data {
+      performance_id
+      as
+      song {
+        title
+      }
+      artist {
+        ... on Artist {
+          name
+        }
+        ... on Membership {
+          group {
+            name
+          }
+          member {
+            name
+          }
+        }
+      }
+    }
+    pagination {
+      total
+      current_page
+    }
+  }
+}
+```
+
+## Membership Type
+
+When performances are by group members, the `Membership` type provides additional context.
+
+```graphql
+type Membership {
+  membership_id: Int!
+  group: Artist!
+  member: Artist!
+  as: String
+  alias: String
+  performances: [Performance!]!
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+}
+```
+
+### Example: Group Member Performance
+
+```graphql
+{
+  song(song_id: 100) {
+    title
+    performances {
+      as
+      artist {
+        ... on Membership {
+          as
+          alias
+          group {
+            name
+          }
+          member {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Response:
+```json
+{
+  "data": {
+    "song": {
+      "title": "Example Song",
+      "performances": [
+        {
+          "as": "Character Name",
+          "artist": {
+            "as": "Vocalist",
+            "alias": "Stage Name",
+            "group": {
+              "name": "Band Name"
+            },
+            "member": {
+              "name": "Artist Name"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+## Example Responses
+
+### Basic Song Query
+
+```json
+{
+  "data": {
+    "song": {
+      "song_id": 1,
+      "title": "Staple Stable",
+      "title_native": "staple stable",
+      "performances": [
+        {
+          "as": "Senjougahara Hitagi (CV: Chiwa Saitou)",
+          "artist": {
+            "name": "Chiwa Saitou"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Song with Multiple Themes
+
+```json
+{
+  "data": {
+    "song": {
+      "title": "Platinum Disco",
+      "animethemes": [
+        {
+          "slug": "OP3",
+          "anime": {
+            "name": "Nisemonogatari"
+          }
+        },
+        {
+          "slug": "OP1",
+          "anime": {
+            "name": "Nisemonogatari: Karen Bee Recap"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+## Filterable Columns
+
+- `song_id`
+- `title`
+- `title_native`
+- `created_at`
+- `updated_at`
+- `deleted_at`
+
+## Sortable Columns
+
+- `SONG_ID`
+- `TITLE`
+- `TITLE_NATIVE`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+## Use Cases
+
+### Song Discovery
+
+Find songs by title:
+
+```graphql
+query FindSong($title: String!) {
+  songPagination(
+    filter: { title: { contains: $title } }
+    first: 10
+  ) {
+    data {
+      title
+      performances {
+        artist {
+          ... on Artist {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Artist Discography
+
+Via artist performances:
+
+```graphql
+query ArtistSongs($artistId: Int!) {
+  artist(artist_id: $artistId) {
+    performances {
+      song {
+        title
+        animethemes {
+          anime {
+            name
+            year
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Song Statistics
+
+Count theme usage:
+
+```graphql
+query SongUsage($id: Int!) {
+  song(song_id: $id) {
+    title
+    animethemes {
+      theme_id
+      slug
+      anime {
+        name
+      }
+    }
+  }
+}
+```
+
+## Performance Queries
+
+### Membership Pagination
+
+Query group memberships.
+
+```graphql
+query ListMemberships($page: Int) {
+  membershipPagination(page: $page) {
+    data {
+      membership_id
+      group {
+        name
+      }
+      member {
+        name
+      }
+      as
+      performances {
+        song {
+          title
+        }
+      }
+    }
+  }
+}
+```
+
+## Related Types
+
+- [Artist](/graphql/schema/artists) - Musical performers
+- [AnimeTheme](/graphql/schema/anime#animetheme) - Theme sequences
+- [Performance](/graphql/schema/artists#performance) - Artist performances
+- [Membership](/graphql/schema/artists#membership) - Group memberships
+- [ExternalResource](/graphql/schema/types#externalresource) - External links

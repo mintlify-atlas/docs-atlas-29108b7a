@@ -1,0 +1,266 @@
+---
+title: 'Studios'
+description: 'Studio resource endpoints for managing animation studios'
+---
+
+## Overview
+
+The Studio resource represents animation production studios. Studios can be associated with multiple anime and have their own images and external resources.
+
+## List Studios
+
+<ParamField path="GET" type="endpoint">
+  /api/studio
+</ParamField>
+
+Retrieve a paginated list of studios.
+
+### Query Parameters
+
+<ParamField query="page[size]" type="integer">
+  Number of results per page (default: 15, max: 100)
+</ParamField>
+
+<ParamField query="page[number]" type="integer">
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relationships to include. Available includes:
+  - `anime` - Anime produced by this studio
+  - `anime.animethemes` - Themes for anime
+  - `anime.images` - Images for anime
+  - `images` - Studio images
+  - `resources` - External resources (official website, social media)
+</ParamField>
+
+<ParamField query="filter[name]" type="string">
+  Filter by studio name
+</ParamField>
+
+<ParamField query="fields[studio]" type="string">
+  Comma-separated list of fields to return. Available fields:
+  - `studio_id`
+  - `name`
+  - `slug`
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort by field. Prefix with `-` for descending order.
+  Available: `name`, `created_at`, `updated_at`
+</ParamField>
+
+<ParamField query="q" type="string">
+  Full-text search query across studio names
+</ParamField>
+
+### Response
+
+<ResponseField name="studios" type="array">
+  Array of studio objects
+  
+  <ResponseField name="studio_id" type="integer">
+    Unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Studio name
+  </ResponseField>
+  
+  <ResponseField name="slug" type="string">
+    URL-friendly identifier
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/studio?include=anime,images&page[size]=10"
+```
+
+### Example Response
+
+```json
+{
+  "studios": [
+    {
+      "studio_id": 1,
+      "name": "Sunrise",
+      "slug": "sunrise",
+      "created_at": "2024-01-15T12:00:00.000000Z",
+      "updated_at": "2024-01-15T12:00:00.000000Z",
+      "anime": [
+        {
+          "anime_id": 1,
+          "name": "Cowboy Bebop",
+          "slug": "cowboy_bebop",
+          "year": 1998,
+          "season": "Spring"
+        },
+        {
+          "anime_id": 2,
+          "name": "Mobile Suit Gundam",
+          "slug": "mobile_suit_gundam",
+          "year": 1979,
+          "season": "Spring"
+        }
+      ],
+      "images": [
+        {
+          "image_id": 10,
+          "facet": "Cover",
+          "link": "https://animethemes.moe/storage/images/sunrise_logo.jpg"
+        }
+      ]
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/studio?page[number]=1",
+    "next": "https://api.animethemes.moe/api/studio?page[number]=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 10
+  }
+}
+```
+
+## Show Studio
+
+<ParamField path="GET" type="endpoint">
+  /api/studio/:slug
+</ParamField>
+
+Retrieve a single studio by its slug.
+
+### Path Parameters
+
+<ParamField path="slug" type="string" required>
+  The studio slug (URL-friendly identifier)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Same includes as list endpoint
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/studio/sunrise?include=anime.animethemes,images,resources"
+```
+
+### Example Response
+
+```json
+{
+  "studio": {
+    "studio_id": 1,
+    "name": "Sunrise",
+    "slug": "sunrise",
+    "created_at": "2024-01-15T12:00:00.000000Z",
+    "updated_at": "2024-01-15T12:00:00.000000Z",
+    "anime": [
+      {
+        "anime_id": 1,
+        "name": "Cowboy Bebop",
+        "slug": "cowboy_bebop",
+        "year": 1998,
+        "season": "Spring",
+        "animethemes": [
+          {
+            "theme_id": 1,
+            "type": "OP",
+            "sequence": 1,
+            "slug": "OP1"
+          },
+          {
+            "theme_id": 2,
+            "type": "ED",
+            "sequence": 1,
+            "slug": "ED1"
+          }
+        ]
+      }
+    ],
+    "images": [
+      {
+        "image_id": 10,
+        "facet": "Cover",
+        "link": "https://animethemes.moe/storage/images/sunrise_logo.jpg"
+      }
+    ],
+    "resources": [
+      {
+        "resource_id": 50,
+        "external_id": "sunrise",
+        "site": "Official Site",
+        "link": "https://www.sunrise-inc.co.jp/"
+      }
+    ]
+  }
+}
+```
+
+## Create Studio
+
+<ParamField path="POST" type="endpoint">
+  /api/studio
+</ParamField>
+
+Create a new studio. Requires authentication.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Studio name
+</ParamField>
+
+<ParamField body="slug" type="string" required>
+  URL-friendly identifier (unique)
+</ParamField>
+
+## Update Studio
+
+<ParamField path="PUT" type="endpoint">
+  /api/studio/:slug
+</ParamField>
+
+Update an existing studio. Requires authentication.
+
+### Request Body
+
+Same fields as create endpoint (all optional).
+
+## Delete Studio
+
+<ParamField path="DELETE" type="endpoint">
+  /api/studio/:slug
+</ParamField>
+
+Soft delete a studio. Requires authentication.
+
+## Restore Studio
+
+<ParamField path="PATCH" type="endpoint">
+  /restore/studio/:slug
+</ParamField>
+
+Restore a soft-deleted studio. Requires authentication.
+
+## Force Delete Studio
+
+<ParamField path="DELETE" type="endpoint">
+  /forceDelete/studio/:slug
+</ParamField>
+
+Permanently delete a studio. Requires authentication.

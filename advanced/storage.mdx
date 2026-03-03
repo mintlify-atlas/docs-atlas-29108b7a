@@ -1,0 +1,458 @@
+---
+title: Storage Configuration
+description: Configure local and S3 storage for media files
+---
+
+AnimeThemes Server supports both local and S3-compatible storage for media files, including videos, audio, images, scripts, and database dumps.
+
+## Overview
+
+Storage is configured in `config/filesystems.php` and controlled via environment variables. Each media type can use different storage disks, allowing you to:
+
+- Store files locally during development
+- Use S3 or S3-compatible services (DigitalOcean Spaces, Backblaze B2, etc.) in production
+- Distribute files across multiple regions for better performance
+
+## Storage Disks
+
+### Default Disks
+
+| Disk | Default Value | Purpose |
+|------|---------------|---------|
+| `FILESYSTEM_DISK` | `local` | Default filesystem disk |
+| `VIDEO_DISK_DEFAULT` | `videos_local` | Default video storage |
+| `AUDIO_DISK_DEFAULT` | `audios_local` | Default audio storage |
+| `IMAGE_DISK` | `images_local` | Image storage |
+| `SCRIPT_DISK` | `scripts_local` | Video script storage |
+| `DUMP_DISK` | `dumps_local` | Database dump storage |
+
+## Local Storage
+
+Local storage is ideal for development and testing. Files are stored in the `public/` directory.
+
+### Configuration
+
+Set up local storage by specifying disk roots:
+
+```bash
+# .env
+VIDEO_DISK_DEFAULT=videos_local
+VIDEO_DISK_ROOT=/path/to/videos
+
+AUDIO_DISK_DEFAULT=audios_local
+AUDIO_DISK_ROOT=/path/to/audios
+
+IMAGE_DISK_ROOT=/path/to/images
+DUMP_DISK_ROOT=/path/to/dumps
+SCRIPT_DISK_ROOT=/path/to/scripts
+```
+
+If not specified, defaults to `storage/app/{type}`.
+
+### Symbolic Links
+
+Create symbolic links to make files publicly accessible:
+
+```bash
+php artisan storage:link
+```
+
+This creates links from `public/` to your storage directories:
+
+- `public/videos` → `VIDEO_DISK_ROOT`
+- `public/audios` → `AUDIO_DISK_ROOT`
+- `public/images` → `IMAGE_DISK_ROOT`
+- `public/dumps` → `DUMP_DISK_ROOT`
+- `public/scripts` → `SCRIPT_DISK_ROOT`
+
+### Local Disk Configuration
+
+From `config/filesystems.php`:
+
+```php
+'videos_local' => [
+    'driver' => 'local',
+    'root' => public_path('videos'),
+    'url' => env('APP_URL').'/videos',
+    'visibility' => 'public',
+    'throw' => false,
+],
+
+'audios_local' => [
+    'driver' => 'local',
+    'root' => public_path('audios'),
+    'url' => env('APP_URL').'/audios',
+    'visibility' => 'public',
+    'throw' => false,
+],
+```
+
+## S3 Storage
+
+Use S3 or S3-compatible services for production deployments.
+
+### Video Storage (S3)
+
+Configure S3 storage for videos:
+
+```bash
+# .env
+VIDEO_DISK_DEFAULT=videos_nyc
+VIDEO_DISKS=videos_nyc,videos_fra
+
+# NYC Region
+VIDEO_NYC_ACCESS_KEY_ID=your-access-key
+VIDEO_NYC_SECRET_ACCESS_KEY=your-secret-key
+VIDEO_NYC_DEFAULT_REGION=us-east-1
+VIDEO_NYC_ENDPOINT=https://nyc3.digitaloceanspaces.com
+VIDEO_NYC_BUCKET=animethemes-videos-nyc
+VIDEO_NYC_VISIBILITY=public
+
+# FRA Region (optional)
+VIDEO_FRA_ACCESS_KEY_ID=your-access-key
+VIDEO_FRA_SECRET_ACCESS_KEY=your-secret-key
+VIDEO_FRA_DEFAULT_REGION=eu-central-1
+VIDEO_FRA_ENDPOINT=https://fra1.digitaloceanspaces.com
+VIDEO_FRA_BUCKET=animethemes-videos-fra
+VIDEO_FRA_VISIBILITY=public
+```
+
+### Audio Storage (S3)
+
+Configure S3 storage for audio:
+
+```bash
+# .env
+AUDIO_DISK_DEFAULT=audios_nyc
+AUDIO_DISKS=audios_nyc,audios_fra
+
+# NYC Region
+AUDIO_NYC_ACCESS_KEY_ID=your-access-key
+AUDIO_NYC_SECRET_ACCESS_KEY=your-secret-key
+AUDIO_NYC_DEFAULT_REGION=us-east-1
+AUDIO_NYC_ENDPOINT=https://nyc3.digitaloceanspaces.com
+AUDIO_NYC_BUCKET=animethemes-audio-nyc
+AUDIO_NYC_VISIBILITY=public
+
+# FRA Region (optional)
+AUDIO_FRA_ACCESS_KEY_ID=your-access-key
+AUDIO_FRA_SECRET_ACCESS_KEY=your-secret-key
+AUDIO_FRA_DEFAULT_REGION=eu-central-1
+AUDIO_FRA_ENDPOINT=https://fra1.digitaloceanspaces.com
+AUDIO_FRA_BUCKET=animethemes-audio-fra
+AUDIO_FRA_VISIBILITY=public
+```
+
+### Image Storage (S3)
+
+Configure S3 storage for images:
+
+```bash
+# .env
+IMAGE_DISK=images
+IMAGE_ACCESS_KEY_ID=your-access-key
+IMAGE_SECRET_ACCESS_KEY=your-secret-key
+IMAGE_DEFAULT_REGION=us-east-1
+IMAGE_ENDPOINT=https://nyc3.digitaloceanspaces.com
+IMAGE_BUCKET=animethemes-images
+IMAGE_VISIBILITY=public
+IMAGE_URL=https://animethemes-images.nyc3.cdn.digitaloceanspaces.com
+```
+
+### Script Storage (S3)
+
+Configure S3 storage for video encoding scripts:
+
+```bash
+# .env
+SCRIPT_DISK=scripts
+SCRIPT_ACCESS_KEY_ID=your-access-key
+SCRIPT_SECRET_ACCESS_KEY=your-secret-key
+SCRIPT_DEFAULT_REGION=us-east-1
+SCRIPT_ENDPOINT=https://nyc3.digitaloceanspaces.com
+SCRIPT_BUCKET=animethemes-scripts
+SCRIPT_VISIBILITY=public
+```
+
+### Dump Storage (S3)
+
+Configure S3 storage for database dumps:
+
+```bash
+# .env
+DUMP_DISK=dumps
+DUMP_ACCESS_KEY_ID=your-access-key
+DUMP_SECRET_ACCESS_KEY=your-secret-key
+DUMP_DEFAULT_REGION=us-east-1
+DUMP_ENDPOINT=https://nyc3.digitaloceanspaces.com
+DUMP_BUCKET=animethemes-dumps
+DUMP_VISIBILITY=public
+```
+
+## S3 Configuration Options
+
+| Option | Description |
+|--------|-------------|
+| `ACCESS_KEY_ID` | S3 access key |
+| `SECRET_ACCESS_KEY` | S3 secret key |
+| `DEFAULT_REGION` | S3 region (e.g., `us-east-1`) |
+| `ENDPOINT` | S3 endpoint URL |
+| `BUCKET` | S3 bucket name |
+| `STREAM_READS` | Enable streaming for large files |
+| `DISABLE_ASSERTS` | Disable S3 SDK assertions |
+| `VISIBILITY` | Default file visibility: `public` or `private` |
+
+## Multi-Disk Configuration
+
+AnimeThemes supports using multiple disks for the same media type. This is useful for:
+
+- **Geographic distribution**: Serve files from the closest region
+- **Load balancing**: Distribute traffic across multiple buckets
+- **Redundancy**: Store copies in multiple locations
+
+### Example: Multiple Video Disks
+
+```bash
+# .env
+VIDEO_DISK_DEFAULT=videos_nyc
+VIDEO_DISKS=videos_nyc,videos_fra
+```
+
+The application will:
+1. Use `videos_nyc` as the default for new uploads
+2. Check both `videos_nyc` and `videos_fra` when retrieving files
+
+## Media URLs
+
+Configure how media files are accessed:
+
+### Subdomain URLs
+
+Serve media from a dedicated subdomain:
+
+```bash
+# .env
+VIDEO_URL=https://v.animethemes.moe
+AUDIO_URL=https://a.animethemes.moe
+```
+
+Leave `VIDEO_PATH` and `AUDIO_PATH` empty when using subdomain URLs.
+
+### Path-based URLs
+
+Serve media from a path on your main domain:
+
+```bash
+# .env
+VIDEO_PATH=/video
+AUDIO_PATH=/audio
+```
+
+Leave `VIDEO_URL` and `AUDIO_URL` empty when using path-based URLs.
+
+Media will be accessible at:
+- `https://animethemes.moe/video/{file}`
+- `https://animethemes.moe/audio/{file}`
+
+## Streaming Methods
+
+### Response Streaming
+
+Stream files through the application (default):
+
+```bash
+# .env
+VIDEO_STREAMING_METHOD=response
+AUDIO_STREAMING_METHOD=response
+```
+
+This method:
+- Works with any web server
+- Allows access control and rate limiting
+- Adds some overhead to the application server
+
+### Nginx Internal Redirect
+
+Stream files directly from Nginx using internal redirects:
+
+```bash
+# .env
+VIDEO_STREAMING_METHOD=nginx
+VIDEO_NGINX_REDIRECT=/video_redirect/
+
+AUDIO_STREAMING_METHOD=nginx
+AUDIO_NGINX_REDIRECT=/audio_redirect/
+```
+
+Configure Nginx with an internal location:
+
+```nginx
+location /video_redirect/ {
+    internal;
+    alias /path/to/videos/;
+}
+
+location /audio_redirect/ {
+    internal;
+    alias /path/to/audios/;
+}
+```
+
+This method:
+- Reduces application server load
+- Requires Nginx configuration
+- May limit access control options
+
+## Storage Operations
+
+### Upload Files
+
+```php
+use Illuminate\Support\Facades\Storage;
+
+// Upload to default video disk
+Storage::disk(config('video.default_disk'))
+    ->put('filename.webm', $fileContents);
+
+// Upload to specific disk
+Storage::disk('videos_nyc')
+    ->put('filename.webm', $fileContents);
+```
+
+### Retrieve Files
+
+```php
+use Illuminate\Support\Facades\Storage;
+
+// Get file from default disk
+$contents = Storage::disk(config('video.default_disk'))
+    ->get('filename.webm');
+
+// Check multiple disks
+$disks = config('video.disks');
+foreach ($disks as $disk) {
+    if (Storage::disk($disk)->exists('filename.webm')) {
+        $url = Storage::disk($disk)->url('filename.webm');
+        break;
+    }
+}
+```
+
+### Delete Files
+
+```php
+use Illuminate\Support\Facades\Storage;
+
+// Delete from default disk
+Storage::disk(config('video.default_disk'))
+    ->delete('filename.webm');
+
+// Delete from all disks
+$disks = config('video.disks');
+foreach ($disks as $disk) {
+    Storage::disk($disk)->delete('filename.webm');
+}
+```
+
+## CDN Configuration
+
+Use a CDN for better performance and reduced bandwidth costs:
+
+```bash
+# .env
+IMAGE_URL=https://animethemes-images.nyc3.cdn.digitaloceanspaces.com
+```
+
+For DigitalOcean Spaces:
+1. Enable CDN in the Spaces settings
+2. Copy the CDN endpoint URL
+3. Set it as the `IMAGE_URL`, `VIDEO_URL`, or `AUDIO_URL`
+
+For CloudFront or other CDNs:
+1. Create a distribution pointing to your S3 bucket
+2. Set the distribution URL as the media URL
+
+## Disk Space Management
+
+### Monitor Disk Usage
+
+```bash
+# Check local storage usage
+du -sh storage/app/videos
+du -sh storage/app/audios
+
+# Check S3 bucket size (AWS CLI)
+aws s3 ls s3://your-bucket --recursive --human-readable --summarize
+```
+
+### Clean Up Old Files
+
+Implement a cleanup strategy for old or unused files:
+
+```php
+use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
+
+// Delete files older than 30 days
+$files = Storage::disk('videos_local')->allFiles();
+foreach ($files as $file) {
+    $lastModified = Storage::disk('videos_local')->lastModified($file);
+    if (Carbon::createFromTimestamp($lastModified)->diffInDays() > 30) {
+        Storage::disk('videos_local')->delete($file);
+    }
+}
+```
+
+## Troubleshooting
+
+### Files not accessible
+
+1. Verify symbolic links exist:
+   ```bash
+   ls -la public/videos
+   php artisan storage:link
+   ```
+
+2. Check file permissions:
+   ```bash
+   chmod -R 755 storage/app
+   chmod -R 755 public/videos
+   ```
+
+3. Verify disk configuration in `config/filesystems.php`
+
+### S3 connection errors
+
+1. Verify credentials:
+   ```bash
+   php artisan tinker
+   Storage::disk('videos_nyc')->files();
+   ```
+
+2. Check endpoint and region settings
+
+3. Verify bucket permissions and CORS settings
+
+### Slow file uploads/downloads
+
+1. Enable `STREAM_READS` for large files
+2. Use a CDN for downloads
+3. Consider multi-region deployment
+4. Increase PHP `upload_max_filesize` and `post_max_size`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/advanced/environment">
+    Complete environment variable reference
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/deployment/docker">
+    Deploy to production
+  </Card>
+  <Card title="Video Management" icon="video" href="/api/videos">
+    Work with video files
+  </Card>
+  <Card title="Audio Management" icon="music" href="/api/audio">
+    Work with audio files
+  </Card>
+</CardGroup>

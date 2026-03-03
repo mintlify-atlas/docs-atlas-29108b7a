@@ -1,0 +1,363 @@
+---
+title: Resource Types
+description: Main resource types and their relationships in AnimeThemes
+---
+
+AnimeThemes organizes data into several core resource types. Understanding these resources and their relationships is essential for working with the API and database.
+
+## Anime
+
+Represents an anime series, movie, OVA, or other media.
+
+### Model Location
+`app/Models/Wiki/Anime.php`
+
+### Key Attributes
+
+- `anime_id` - Unique identifier
+- `slug` - URL-friendly name (e.g., "bakemonogatari")
+- `name` - Official title
+- `year` - Release year
+- `season` - Season enum: `WINTER`, `SPRING`, `SUMMER`, `FALL`
+- `media_format` - Format enum: `TV`, `MOVIE`, `OVA`, `ONA`, `SPECIAL`
+- `synopsis` - Description text
+
+### Relationships
+
+```php
+// One-to-many
+$anime->animethemes;      // Theme songs (OP/ED)
+$anime->synonyms;         // Alternative titles
+$anime->externalentries;  // External service entries
+
+// Many-to-many
+$anime->series;           // Related series
+$anime->studios;          // Production studios
+$anime->images;           // Cover images
+$anime->resources;        // External links (MAL, AniList, etc.)
+```
+
+### Route Key
+
+Anime uses the `slug` attribute as its route key:
+```text
+/api/anime/bakemonogatari
+```
+
+## Artist
+
+Represents a performer, vocalist, or musical group.
+
+### Model Location
+`app/Models/Wiki/Artist.php`
+
+### Key Attributes
+
+- `artist_id` - Unique identifier
+- `slug` - URL-friendly name
+- `name` - Artist name
+- `information` - Biography or additional info
+
+### Relationships
+
+```php
+// Direct relationships
+$artist->songs;           // Songs performed (deprecated)
+$artist->performances;    // Performance records
+$artist->memberships;     // Group memberships
+$artist->groupships;      // Members if this is a group
+
+// Many-to-many
+$artist->members;         // Individual members (if group)
+$artist->groups;          // Groups this artist belongs to
+$artist->images;          // Artist photos
+$artist->resources;       // External links
+```
+
+### Artist-Song Relationships
+
+<Warning>
+The direct `artist_song` pivot table is deprecated. Use the `performances` relationship instead, which supports more complex artist-song associations including membership performances.
+</Warning>
+
+## Song
+
+Represents a musical composition used in anime themes.
+
+### Model Location
+`app/Models/Wiki/Song.php`
+
+### Key Attributes
+
+- `song_id` - Unique identifier
+- `title` - Song title (optional, may be null)
+- `title_native` - Native language title
+
+### Relationships
+
+```php
+$song->animethemes;       // Themes using this song
+$song->artists;           // Performing artists (deprecated)
+$song->performances;      // Performance records
+$song->resources;         // External links
+```
+
+<Note>
+Songs can be reused across multiple anime. For example, the same song might be OP1 for one anime and OP2 for another.
+</Note>
+
+## Theme (AnimeTheme)
+
+Represents an opening or ending theme for an anime.
+
+### Model Location
+`app/Models/Wiki/Anime/AnimeTheme.php`
+
+### Key Attributes
+
+- `theme_id` - Unique identifier
+- `type` - Theme type enum: `OP` (opening), `ED` (ending)
+- `sequence` - Theme number (1, 2, 3, etc.)
+- `slug` - Formatted identifier ("OP1", "ED2")
+- `anime_id` - Parent anime (foreign key)
+- `song_id` - Associated song (foreign key, nullable)
+
+### Relationships
+
+```php
+$theme->anime;            // Parent anime
+$theme->song;             // Associated song
+$theme->animethemeentries; // Theme versions/entries
+$theme->group;            // Theme group (if applicable)
+```
+
+## Entry (AnimeThemeEntry)
+
+Represents a specific version or variant of a theme.
+
+### Model Location
+`app/Models/Wiki/Anime/Theme/AnimeThemeEntry.php`
+
+### Key Attributes
+
+- `entry_id` - Unique identifier
+- `version` - Version number (1, 2, 3, etc.)
+- `episodes` - Episode range (e.g., "1-12", "13-24")
+- `nsfw` - Boolean, contains NSFW content
+- `spoiler` - Boolean, contains spoilers
+- `notes` - Additional information
+- `theme_id` - Parent theme (foreign key)
+
+### Relationships
+
+```php
+$entry->animetheme;       // Parent theme
+$entry->videos;           // Video files (many-to-many)
+```
+
+<Tip>
+Entries allow the same theme to have multiple versions. For example, a broadcast version and a creditless version would be separate entries.
+</Tip>
+
+## Video
+
+Represents a video file containing theme footage.
+
+### Model Location
+`app/Models/Wiki/Video.php`
+
+### Key Attributes
+
+- `video_id` - Unique identifier
+- `basename` - Unique filename without extension (route key)
+- `filename` - Full filename
+- `path` - Storage path
+- `size` - File size in bytes
+- `mimetype` - MIME type (e.g., "video/webm")
+- `resolution` - Vertical resolution (480, 720, 1080)
+- `nc` - Boolean, no credits version
+- `subbed` - Boolean, has hardcoded subtitles
+- `lyrics` - Boolean, has hardcoded lyrics
+- `uncen` - Boolean, uncensored
+- `overlap` - Enum: `NONE`, `TRANS`, `OVER`
+- `source` - Enum: `BD`, `DVD`, `WEB`, etc.
+- `audio_id` - Foreign key to audio track (nullable)
+
+### Relationships
+
+```php
+$video->animethemeentries; // Entries using this video
+$video->audio;             // Associated audio track
+$video->videoscript;       // Subtitle/script file
+$video->tracks;            // Playlist tracks
+```
+
+### Computed Attributes
+
+```php
+$video->link;             // Public URL
+$video->tags;             // Display tags ("NC", "BD", "1080")
+$video->priority;         // Quality priority score
+```
+
+### Route Key
+
+Videos use the `basename` attribute:
+```text
+/api/video/Bakemonogatari-OP1.webm
+```
+
+## Audio
+
+Represents an audio file extracted from video.
+
+### Model Location
+`app/Models/Wiki/Audio.php`
+
+### Key Attributes
+
+- `audio_id` - Unique identifier
+- `basename` - Unique filename without extension (route key)
+- `filename` - Full filename
+- `path` - Storage path
+- `size` - File size in bytes
+- `mimetype` - MIME type (e.g., "audio/ogg")
+
+### Relationships
+
+```php
+$audio->videos;           // Videos using this audio
+```
+
+<Note>
+Videos can share the same audio track. Multiple video variants (different resolutions, sources) may reference a single high-quality audio extraction.
+</Note>
+
+## Image
+
+Represents cover art and other images.
+
+### Model Location
+`app/Models/Wiki/Image.php`
+
+### Key Attributes
+
+- `image_id` - Unique identifier
+- `path` - Storage path
+- `facet` - Image type enum:
+  - `SMALL_COVER` - Small cover image
+  - `LARGE_COVER` - Large cover image
+  - `GRILL` - Character grill image
+  - `DOCUMENT` - Documentation image
+
+### Polymorphic Relationships
+
+Images can be attached to multiple resource types:
+
+```php
+$image->anime;            // Anime using this image
+$image->artists;          // Artists using this image
+$image->studios;          // Studios using this image
+$image->playlists;        // Playlists using this image
+```
+
+## Series
+
+Groups related anime together.
+
+### Model Location
+`app/Models/Wiki/Series.php`
+
+### Key Attributes
+
+- `series_id` - Unique identifier
+- `slug` - URL-friendly name
+- `name` - Series name
+
+### Relationships
+
+```php
+$series->anime;           // Anime in this series
+```
+
+### Example
+
+The "Monogatari" series would group:
+- Bakemonogatari
+- Nisemonogatari
+- Nekomonogatari
+- Etc.
+
+## Studio
+
+Represents an animation studio.
+
+### Model Location
+`app/Models/Wiki/Studio.php`
+
+### Key Attributes
+
+- `studio_id` - Unique identifier
+- `slug` - URL-friendly name
+- `name` - Studio name
+
+### Relationships
+
+```php
+$studio->anime;           // Anime produced by studio
+$studio->images;          // Studio logos/images
+$studio->resources;       // External links
+```
+
+## External Resource
+
+Links to external databases and services.
+
+### Supported Sites
+
+- MyAnimeList (MAL)
+- AniList
+- AniDB
+- Anime-Planet
+- Kitsu
+- Official websites
+- Twitter/X
+
+### Polymorphic Usage
+
+Resources can be attached to:
+- Anime
+- Artists
+- Songs
+
+## Soft Deletes
+
+<Warning>
+All main resources implement soft deletes. When a resource is "deleted", it's marked with a `deleted_at` timestamp but remains in the database. This preserves referential integrity and allows recovery.
+</Warning>
+
+## Route Keys
+
+Different resources use different attributes for routing:
+
+| Resource | Route Key | Example |
+|----------|-----------|----------|
+| Anime | `slug` | `/anime/bakemonogatari` |
+| Artist | `slug` | `/artist/supercell` |
+| Video | `basename` | `/video/Bakemonogatari-OP1.webm` |
+| Audio | `basename` | `/audio/Bakemonogatari-OP1.ogg` |
+| Series | `slug` | `/series/monogatari` |
+| Studio | `slug` | `/studio/shaft` |
+
+## Resource Hierarchy
+
+The typical resource hierarchy flows like this:
+
+```text
+Studio ──────────────┐
+                      ├─→ Anime ─→ Theme ─→ Entry ─→ Video ─→ Audio
+                      │             │                   │
+Series ──────────────┘             └─→ Song ←──────────┘
+                                        │
+Artist ─────────────────────────────────┘
+```

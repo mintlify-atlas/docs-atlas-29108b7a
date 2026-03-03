@@ -1,0 +1,303 @@
+---
+title: Database Structure
+description: Understanding the AnimeThemes database schema and relationships
+---
+
+The AnimeThemes database is built on MySQL and uses Laravel's Eloquent ORM. This page documents the core tables and their relationships.
+
+## Core Tables
+
+### Anime
+
+The `anime` table stores anime series information.
+
+```sql
+CREATE TABLE anime (
+  anime_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  slug VARCHAR(255),
+  name VARCHAR(255),
+  year INT NULL,
+  season INT NULL,
+  media_format INT NULL,
+  synopsis TEXT NULL
+);
+```
+
+**Key Fields:**
+- `anime_id` - Primary key
+- `slug` - URL-friendly identifier (used in routes)
+- `name` - Official anime title
+- `year` - Release year
+- `season` - Season enum (Winter, Spring, Summer, Fall)
+- `media_format` - Format enum (TV, Movie, OVA, etc.)
+- `synopsis` - Anime description
+
+### Anime Themes
+
+The `anime_themes` table represents opening/ending themes for anime.
+
+```sql
+CREATE TABLE anime_themes (
+  theme_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  type INT,
+  sequence INT NULL,
+  slug VARCHAR(255),
+  anime_id BIGINT UNSIGNED,
+  song_id BIGINT UNSIGNED NULL,
+  FOREIGN KEY (anime_id) REFERENCES anime(anime_id) ON DELETE CASCADE,
+  FOREIGN KEY (song_id) REFERENCES songs(song_id) ON DELETE SET NULL
+);
+```
+
+**Key Fields:**
+- `type` - Theme type (OP for opening, ED for ending)
+- `sequence` - Theme number (e.g., OP1, OP2)
+- `slug` - Formatted identifier (e.g., "OP1", "ED2")
+
+### Songs
+
+The `songs` table stores song metadata.
+
+```sql
+CREATE TABLE songs (
+  song_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  title VARCHAR(255) NULL
+);
+```
+
+Songs can be linked to multiple themes across different anime.
+
+### Artists
+
+The `artists` table stores performer information.
+
+```sql
+CREATE TABLE artists (
+  artist_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  slug VARCHAR(255),
+  name VARCHAR(255),
+  information TEXT NULL
+);
+```
+
+Artists are linked to songs through a many-to-many relationship.
+
+### Videos
+
+The `videos` table stores video file metadata.
+
+```sql
+CREATE TABLE videos (
+  video_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  basename VARCHAR(255),
+  filename VARCHAR(255),
+  path VARCHAR(255),
+  size INT,
+  mimetype VARCHAR(255),
+  resolution INT NULL,
+  nc BOOLEAN DEFAULT FALSE,
+  subbed BOOLEAN DEFAULT FALSE,
+  lyrics BOOLEAN DEFAULT FALSE,
+  uncen BOOLEAN DEFAULT FALSE,
+  overlap INT,
+  source INT NULL,
+  audio_id BIGINT UNSIGNED NULL
+);
+```
+
+**Key Fields:**
+- `basename` - Unique filename without extension (used as route key)
+- `path` - Full path in storage
+- `resolution` - Video resolution (480, 720, 1080, etc.)
+- `nc` - No credits version
+- `subbed` - Has hardcoded subtitles
+- `lyrics` - Has hardcoded lyrics
+- `uncen` - Uncensored version
+- `overlap` - How video overlaps with episode (None, Transition, Over)
+- `source` - Video source (BD, DVD, WEB, etc.)
+
+### Audio
+
+The `audios` table stores audio file metadata.
+
+```sql
+CREATE TABLE audios (
+  audio_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  basename VARCHAR(255),
+  filename VARCHAR(255),
+  path VARCHAR(255),
+  size INT,
+  mimetype VARCHAR(255)
+);
+```
+
+Videos can optionally belong to an audio track through the `audio_id` foreign key.
+
+### Theme Entries
+
+The `anime_theme_entries` table represents specific versions of a theme.
+
+```sql
+CREATE TABLE anime_theme_entries (
+  entry_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  version INT,
+  episodes VARCHAR(255) NULL,
+  nsfw BOOLEAN DEFAULT FALSE,
+  spoiler BOOLEAN DEFAULT FALSE,
+  notes TEXT NULL,
+  theme_id BIGINT UNSIGNED,
+  FOREIGN KEY (theme_id) REFERENCES anime_themes(theme_id) ON DELETE CASCADE
+);
+```
+
+**Key Fields:**
+- `version` - Entry version number (1, 2, 3, etc.)
+- `episodes` - Episode range where this version appears
+- `nsfw` - Contains NSFW content
+- `spoiler` - Contains spoilers
+
+### Images
+
+The `images` table stores image metadata.
+
+```sql
+CREATE TABLE images (
+  image_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  path VARCHAR(255),
+  facet INT
+);
+```
+
+**Key Fields:**
+- `facet` - Image type (Small Cover, Large Cover, Grill, Document)
+
+### Series
+
+The `series` table groups related anime.
+
+```sql
+CREATE TABLE series (
+  series_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  slug VARCHAR(255),
+  name VARCHAR(255)
+);
+```
+
+### Studios
+
+The `studios` table stores animation studio information.
+
+```sql
+CREATE TABLE studios (
+  studio_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  deleted_at TIMESTAMP(6) NULL,
+  slug VARCHAR(255),
+  name VARCHAR(255)
+);
+```
+
+## Relationship Tables
+
+### Entry-Video Relationship
+
+The `anime_theme_entry_video` pivot table connects entries to videos.
+
+```sql
+CREATE TABLE anime_theme_entry_video (
+  created_at TIMESTAMP(6),
+  updated_at TIMESTAMP(6),
+  entry_id BIGINT UNSIGNED,
+  video_id BIGINT UNSIGNED,
+  PRIMARY KEY (entry_id, video_id),
+  FOREIGN KEY (entry_id) REFERENCES anime_theme_entries(entry_id) ON DELETE CASCADE,
+  FOREIGN KEY (video_id) REFERENCES videos(video_id) ON DELETE CASCADE
+);
+```
+
+This many-to-many relationship allows a single video to be used in multiple entries.
+
+### Artist-Song Relationship
+
+The `artist_song` pivot table connects artists to songs (deprecated in favor of performances).
+
+### Anime-Series Relationship
+
+The `anime_series` pivot table groups anime into series.
+
+### Anime-Studio Relationship
+
+The `anime_studio` pivot table associates anime with production studios.
+
+## Polymorphic Relationships
+
+### Images (Imageable)
+
+Images use a polymorphic many-to-many relationship through the `imageables` table, allowing them to be attached to:
+- Anime
+- Artists
+- Studios
+- Playlists
+
+### Resources (Resourceable)
+
+External resources (MAL, AniList, AniDB links) use a polymorphic relationship allowing them to be attached to:
+- Anime
+- Artists
+- Songs
+
+## Data Flow Example
+
+Here's how data connects from anime to video:
+
+```text
+Anime
+  └─ AnimeTheme (OP1, ED1, etc.)
+      ├─ Song
+      │   └─ Artists (many-to-many)
+      └─ AnimeThemeEntry (versions)
+          └─ Videos (many-to-many)
+              └─ Audio (optional)
+```
+
+## Soft Deletes
+
+<Note>
+All main resource tables use soft deletes (`deleted_at` timestamp). This means records are marked as deleted but not physically removed from the database, allowing for recovery and maintaining referential integrity.
+</Note>
+
+## Timestamps
+
+All tables use microsecond precision timestamps (6 decimal places) for `created_at` and `updated_at` fields.
+
+## Primary Keys
+
+All tables use auto-incrementing unsigned big integers as primary keys, following the pattern `{table_name}_id`.

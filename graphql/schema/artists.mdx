@@ -1,0 +1,595 @@
+---
+title: Artist Type
+description: GraphQL type definition and queries for artist resources
+---
+
+The `Artist` type represents a musical performer of anime sequences. For example, Chiwa Saitou is the musical performer of the Bakemonogatari OP1 theme, among many others.
+
+## Type Definition
+
+```graphql
+type Artist {
+  # Identification
+  artist_id: Int!
+  name: String!
+  slug: String!
+  
+  # Metadata
+  information: String
+  
+  # Timestamps
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+  
+  # Relationships
+  performances: [Performance!]!
+  memberships: [Membership!]!
+  groupships: [Membership!]!
+  members: [Artist!]!
+  groups: [Artist!]!
+  images: [Image!]!
+  resources: [ExternalResource!]!
+}
+```
+
+## Fields
+
+### artist_id
+
+Unique identifier for the artist.
+
+- Type: `Int!`
+- Example: `1`
+
+### name
+
+The name of the artist or group.
+
+- Type: `String!`
+- Example: `"Chiwa Saitou"`
+
+### slug
+
+URL-friendly identifier.
+
+- Type: `String!`
+- Example: `"chiwa_saitou"`
+
+### information
+
+Additional information about the artist (biography, notes, etc.).
+
+- Type: `String`
+- Example: `"Japanese voice actress and singer born in Saitama Prefecture."`
+
+## Relationships
+
+### performances
+
+Songs performed by this artist (directly, not through group membership).
+
+```graphql
+{
+  artist(artist_id: 1) {
+    performances {
+      performance_id
+      as
+      song {
+        title
+      }
+    }
+  }
+}
+```
+
+Returns: `[Performance!]!`
+
+A `Performance` represents an artist's work on a specific song, including:
+- `as` - The name used for this performance (e.g., stage name, character name)
+- `song` - The song performed
+- `artist` - The performer (Artist or Membership)
+
+### memberships
+
+Memberships where this artist is the member (joining groups).
+
+```graphql
+{
+  artist(artist_id: 1) {
+    memberships {
+      membership_id
+      group {
+        name
+      }
+      as
+      alias
+    }
+  }
+}
+```
+
+Returns: `[Membership!]!`
+
+Represents this artist being a member of another artist (group).
+
+### groupships
+
+Memberships where this artist is the group (containing members).
+
+```graphql
+{
+  artist(artist_id: 1) {
+    groupships {
+      membership_id
+      member {
+        name
+      }
+      as
+      alias
+    }
+  }
+}
+```
+
+Returns: `[Membership!]!`
+
+Represents other artists being members of this artist (if this is a group).
+
+### members
+
+Individual artists who are members of this group.
+
+```graphql
+{
+  artist(artist_id: 1) {
+    members {
+      artist_id
+      name
+      slug
+    }
+  }
+}
+```
+
+Returns: `[Artist!]!`
+
+Only applicable when this artist represents a group.
+
+### groups
+
+Groups this artist is a member of.
+
+```graphql
+{
+  artist(artist_id: 1) {
+    groups {
+      artist_id
+      name
+      slug
+    }
+  }
+}
+```
+
+Returns: `[Artist!]!`
+
+### images
+
+Profile images and artwork.
+
+```graphql
+{
+  artist(artist_id: 1) {
+    images {
+      path
+      facet
+      link
+    }
+  }
+}
+```
+
+Returns: `[Image!]!`
+
+### resources
+
+External links (MAL, AniList, official sites, etc.).
+
+```graphql
+{
+  artist(artist_id: 1) {
+    resources {
+      external_id
+      site
+      link
+    }
+  }
+}
+```
+
+Returns: `[ExternalResource!]!`
+
+## Queries
+
+### Single Artist
+
+Query a single artist by ID.
+
+```graphql
+query GetArtist($id: Int!) {
+  artist(artist_id: $id) {
+    artist_id
+    name
+    slug
+    information
+    performances {
+      as
+      song {
+        title
+        animethemes {
+          anime {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "id": 1
+}
+```
+
+### Artist Pagination
+
+Query multiple artists with filtering and sorting.
+
+```graphql
+query ListArtists($page: Int, $first: Int) {
+  artistPagination(
+    page: $page
+    first: $first
+    sort: [{ column: NAME, direction: ASC }]
+  ) {
+    data {
+      artist_id
+      name
+      slug
+      performances {
+        song {
+          title
+        }
+      }
+    }
+    pagination {
+      total
+      current_page
+      has_more_pages
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "page": 1,
+  "first": 25
+}
+```
+
+### Search Artists
+
+Search artists by name.
+
+```graphql
+query SearchArtists($searchTerm: String!) {
+  artistPagination(
+    search: $searchTerm
+    first: 10
+  ) {
+    data {
+      artist_id
+      name
+      slug
+      images {
+        link
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "searchTerm": "chiwa"
+}
+```
+
+### Artist with Discography
+
+Query artist with all performances and associated anime.
+
+```graphql
+query ArtistDiscography($id: Int!) {
+  artist(artist_id: $id) {
+    name
+    information
+    performances {
+      as
+      song {
+        title
+        title_native
+        animethemes {
+          slug
+          type
+          anime {
+            name
+            year
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Artist Group Structure
+
+Query group memberships and relationships.
+
+```graphql
+query ArtistGroupStructure($id: Int!) {
+  artist(artist_id: $id) {
+    name
+    
+    # If this is a group, show members
+    members {
+      artist_id
+      name
+      slug
+    }
+    
+    # If this is an individual, show groups they belong to
+    groups {
+      artist_id
+      name
+      slug
+    }
+    
+    # Detailed membership info
+    memberships {
+      as
+      alias
+      group {
+        name
+      }
+    }
+  }
+}
+```
+
+### Artist with Member Performances
+
+For groups, query performances by members.
+
+```graphql
+query GroupPerformances($id: Int!) {
+  artist(artist_id: $id) {
+    name
+    
+    # Direct group performances
+    performances {
+      as
+      song {
+        title
+      }
+    }
+    
+    # Member performances through memberships
+    groupships {
+      member {
+        name
+      }
+      performances {
+        as
+        song {
+          title
+        }
+      }
+    }
+  }
+}
+```
+
+## Performance Type
+
+The `Performance` type links artists to songs.
+
+```graphql
+type Performance {
+  performance_id: Int!
+  as: String
+  song: Song!
+  artist: PerformanceArtist!
+  created_at: String!
+  updated_at: String!
+}
+
+union PerformanceArtist = Artist | Membership
+```
+
+- `as` - The credited name (e.g., "Senjougahara Hitagi (CV: Chiwa Saitou)")
+- `song` - The song performed
+- `artist` - The performer (either an Artist or a Membership)
+
+## Membership Type
+
+The `Membership` type represents artist group relationships.
+
+```graphql
+type Membership {
+  membership_id: Int!
+  group: Artist!
+  member: Artist!
+  as: String
+  alias: String
+  performances: [Performance!]!
+  created_at: String!
+  updated_at: String!
+}
+```
+
+- `group` - The group artist
+- `member` - The member artist
+- `as` - Name used in this context
+- `alias` - Alternative name
+- `performances` - Songs performed as this membership
+
+## Example Responses
+
+### Basic Artist Query
+
+```json
+{
+  "data": {
+    "artist": {
+      "artist_id": 1,
+      "name": "Chiwa Saitou",
+      "slug": "chiwa_saitou",
+      "performances": [
+        {
+          "as": "Senjougahara Hitagi (CV: Chiwa Saitou)",
+          "song": {
+            "title": "Staple Stable"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Artist with Groups
+
+```json
+{
+  "data": {
+    "artist": {
+      "artist_id": 5,
+      "name": "John Doe",
+      "groups": [
+        {
+          "artist_id": 10,
+          "name": "The Band",
+          "slug": "the_band"
+        }
+      ],
+      "memberships": [
+        {
+          "as": "Vocalist",
+          "group": {
+            "name": "The Band"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+## Filterable Columns
+
+- `artist_id`
+- `name`
+- `slug`
+- `created_at`
+- `updated_at`
+- `deleted_at`
+
+## Sortable Columns
+
+- `ARTIST_ID`
+- `NAME`
+- `SLUG`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+## Use Cases
+
+### Finding Songs by Artist
+
+```graphql
+query ArtistSongs($artistId: Int!) {
+  artist(artist_id: $artistId) {
+    name
+    performances {
+      song {
+        title
+        animethemes {
+          anime {
+            name
+          }
+          slug
+        }
+      }
+    }
+  }
+}
+```
+
+### Group Member Lookup
+
+```graphql
+query GroupMembers($groupId: Int!) {
+  artist(artist_id: $groupId) {
+    name
+    members {
+      name
+      slug
+    }
+  }
+}
+```
+
+### Complete Artist Profile
+
+```graphql
+query CompleteArtistProfile($id: Int!) {
+  artist(artist_id: $id) {
+    name
+    slug
+    information
+    images {
+      link
+    }
+    resources {
+      site
+      link
+    }
+    performances {
+      as
+      song {
+        title
+      }
+    }
+    groups {
+      name
+    }
+  }
+}
+```
+
+## Related Types
+
+- [Performance](/graphql/schema/songs#performance) - Artist song performances
+- [Membership](/graphql/schema/songs#membership) - Group memberships
+- [Song](/graphql/schema/songs) - Songs performed
+- [Image](/graphql/schema/types#image) - Artist images
+- [ExternalResource](/graphql/schema/types#externalresource) - External links

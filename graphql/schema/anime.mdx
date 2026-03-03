@@ -1,0 +1,483 @@
+---
+title: Anime Type
+description: GraphQL type definition and queries for anime resources
+---
+
+The `Anime` type represents a production with at least one opening or ending sequence. For example, Bakemonogatari is an anime production with five opening sequences and one ending sequence.
+
+## Type Definition
+
+```graphql
+type Anime {
+  # Identification
+  anime_id: Int!
+  name: String!
+  slug: String!
+  
+  # Metadata
+  year: Int
+  season: AnimeSeason
+  season_localized: String
+  media_format: AnimeMediaFormat
+  media_format_localized: String
+  synopsis: String
+  
+  # Timestamps
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+  
+  # Relationships
+  animethemes: [AnimeTheme!]!
+  synonyms: [Synonym!]!
+  animesynonyms: [AnimeSynonym!]! @deprecated
+  images: [Image!]!
+  resources: [ExternalResource!]!
+  series: [Series!]!
+  studios: [Studio!]!
+}
+```
+
+## Fields
+
+### anime_id
+
+Unique identifier for the anime.
+
+- Type: `Int!`
+- Example: `1`
+
+### name
+
+The primary name of the anime.
+
+- Type: `String!`
+- Example: `"Bakemonogatari"`
+
+### slug
+
+URL-friendly identifier.
+
+- Type: `String!`
+- Example: `"bakemonogatari"`
+
+### year
+
+The year the anime was released.
+
+- Type: `Int`
+- Example: `2009`
+
+### season
+
+The broadcast season.
+
+- Type: `AnimeSeason`
+- Values: `WINTER`, `SPRING`, `SUMMER`, `FALL`
+
+### media_format
+
+The format of the anime production.
+
+- Type: `AnimeMediaFormat`
+- Values: `TV`, `MOVIE`, `OVA`, `ONA`, `SPECIAL`, `MUSIC_VIDEO`
+
+### synopsis
+
+A brief description of the anime.
+
+- Type: `String`
+- Example: `"Koyomi Araragi, a third-year high school student..."`
+
+## Relationships
+
+### animethemes
+
+The opening and ending themes for this anime.
+
+```graphql
+{
+  anime(anime_id: 1) {
+    animethemes {
+      theme_id
+      type
+      sequence
+      slug
+      song {
+        title
+      }
+    }
+  }
+}
+```
+
+Returns: `[AnimeTheme!]!`
+
+### synonyms
+
+Alternative names and titles for this anime.
+
+```graphql
+{
+  anime(anime_id: 1) {
+    synonyms {
+      text
+      type
+    }
+  }
+}
+```
+
+Returns: `[Synonym!]!`
+
+### images
+
+Cover images and artwork for this anime.
+
+```graphql
+{
+  anime(anime_id: 1) {
+    images {
+      path
+      facet
+      link
+    }
+  }
+}
+```
+
+Returns: `[Image!]!`
+
+### resources
+
+External links (MAL, AniList, AniDB, etc.).
+
+```graphql
+{
+  anime(anime_id: 1) {
+    resources {
+      external_id
+      site
+      link
+    }
+  }
+}
+```
+
+Returns: `[ExternalResource!]!`
+
+### series
+
+The series this anime belongs to (e.g., Monogatari Series).
+
+```graphql
+{
+  anime(anime_id: 1) {
+    series {
+      series_id
+      name
+      slug
+    }
+  }
+}
+```
+
+Returns: `[Series!]!`
+
+### studios
+
+Animation studios that produced this anime.
+
+```graphql
+{
+  anime(anime_id: 1) {
+    studios {
+      studio_id
+      name
+      slug
+    }
+  }
+}
+```
+
+Returns: `[Studio!]!`
+
+## Queries
+
+### Single Anime
+
+Query a single anime by ID.
+
+```graphql
+query GetAnime($id: Int!) {
+  anime(anime_id: $id) {
+    anime_id
+    name
+    slug
+    year
+    season
+    animethemes {
+      slug
+      type
+      song {
+        title
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "id": 1
+}
+```
+
+### Anime Pagination
+
+Query multiple anime with filtering and sorting.
+
+```graphql
+query ListAnime($page: Int, $first: Int, $year: Int) {
+  animePagination(
+    page: $page
+    first: $first
+    filter: { year: { eq: $year } }
+    sort: [{ column: NAME, direction: ASC }]
+  ) {
+    data {
+      anime_id
+      name
+      slug
+      year
+      season
+    }
+    pagination {
+      total
+      current_page
+      has_more_pages
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "page": 1,
+  "first": 25,
+  "year": 2023
+}
+```
+
+### Search Anime
+
+Search anime by name or synonym.
+
+```graphql
+query SearchAnime($searchTerm: String!) {
+  animePagination(
+    search: $searchTerm
+    first: 10
+  ) {
+    data {
+      anime_id
+      name
+      slug
+      year
+      synonyms {
+        text
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "searchTerm": "bakemonogatari"
+}
+```
+
+### Anime with Themes and Videos
+
+Query anime with nested theme and video data.
+
+```graphql
+query AnimeWithVideos($id: Int!) {
+  anime(anime_id: $id) {
+    name
+    animethemes {
+      slug
+      type
+      song {
+        title
+        performances {
+          as
+          artist {
+            ... on Artist {
+              name
+            }
+          }
+        }
+      }
+      animethemeentries {
+        version
+        episodes
+        videos {
+          basename
+          resolution
+          source
+          tags
+          link
+        }
+      }
+    }
+  }
+}
+```
+
+### Filter by Season and Year
+
+```graphql
+query AnimeBySeasonYear($year: Int!, $season: AnimeSeason!) {
+  animePagination(
+    filter: { 
+      year: { eq: $year }
+      season: { eq: $season }
+    }
+    sort: [{ column: NAME, direction: ASC }]
+  ) {
+    data {
+      name
+      slug
+      media_format
+      studios {
+        name
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "year": 2023,
+  "season": "FALL"
+}
+```
+
+### Find Anime by External ID
+
+Find anime using an external site ID (e.g., MyAnimeList ID).
+
+```graphql
+query FindAnimeByExternalSite($site: String!, $externalId: Int!) {
+  findAnimeByExternalSite(
+    site: $site
+    external_id: $externalId
+  ) {
+    anime_id
+    name
+    slug
+    year
+    resources {
+      site
+      external_id
+      link
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "site": "MyAnimeList",
+  "externalId": 5081
+}
+```
+
+## Example Responses
+
+### Basic Anime Query
+
+```json
+{
+  "data": {
+    "anime": {
+      "anime_id": 1,
+      "name": "Bakemonogatari",
+      "slug": "bakemonogatari",
+      "year": 2009,
+      "season": "SUMMER",
+      "animethemes": [
+        {
+          "slug": "OP1",
+          "type": "OP",
+          "song": {
+            "title": "Staple Stable"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Pagination Response
+
+```json
+{
+  "data": {
+    "animePagination": {
+      "data": [
+        {
+          "anime_id": 1,
+          "name": "Bakemonogatari",
+          "slug": "bakemonogatari",
+          "year": 2009,
+          "season": "SUMMER"
+        }
+      ],
+      "pagination": {
+        "total": 1,
+        "current_page": 1,
+        "has_more_pages": false
+      }
+    }
+  }
+}
+```
+
+## Filterable Columns
+
+- `anime_id`
+- `name`
+- `slug`
+- `year`
+- `season`
+- `media_format`
+- `created_at`
+- `updated_at`
+- `deleted_at`
+
+## Sortable Columns
+
+- `ANIME_ID`
+- `NAME`
+- `SLUG`
+- `YEAR`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+## Related Types
+
+- [AnimeTheme](/graphql/schema/types#animetheme) - Theme sequences
+- [Series](/graphql/schema/types#series) - Anime series
+- [Studio](/graphql/schema/types#studio) - Animation studios
+- [Image](/graphql/schema/types#image) - Cover images
+- [ExternalResource](/graphql/schema/types#externalresource) - External links

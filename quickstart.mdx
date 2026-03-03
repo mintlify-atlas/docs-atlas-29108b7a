@@ -1,80 +1,264 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with the AnimeThemes API in minutes
 ---
 
-## Get started in three steps
+This guide will help you make your first API call to the AnimeThemes Server and retrieve anime theme data.
 
-Get your documentation site running locally and make your first customization.
+## Using the public API
 
-### Step 1: Set up your local environment
+The easiest way to get started is to use the public AnimeThemes API at `https://api.animethemes.moe`. No authentication is required for read operations.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Make your first request">
+    Let's retrieve a list of anime from the database. The API returns paginated results with metadata.
+
+    <CodeGroup>
+      ```bash curl
+      curl https://api.animethemes.moe/api/anime
+      ```
+
+      ```javascript JavaScript
+      fetch('https://api.animethemes.moe/api/anime')
+        .then(response => response.json())
+        .then(data => console.log(data));
+      ```
+
+      ```python Python
+      import requests
+
+      response = requests.get('https://api.animethemes.moe/api/anime')
+      data = response.json()
+      print(data)
+      ```
+
+      ```php PHP
+      $response = file_get_contents('https://api.animethemes.moe/api/anime');
+      $data = json_decode($response, true);
+      print_r($data);
+      ```
+    </CodeGroup>
+
+    <Note>
+      The API returns 15 results per page by default. You can customize pagination using the `page[size]` and `page[number]` query parameters.
+    </Note>
+  </Step>
+
+  <Step title="Understanding the response">
+    The API returns a JSON response with the following structure:
+
+    ```json Response format
+    {
+      "anime": [
+        {
+          "id": 1,
+          "name": "Cowboy Bebop",
+          "slug": "cowboy_bebop",
+          "year": 1998,
+          "season": "Spring",
+          "media_format": "TV",
+          "synopsis": "In the year 2071...",
+          "created_at": "2017-10-03T18:26:14.000000Z",
+          "updated_at": "2024-01-15T10:30:22.000000Z",
+          "deleted_at": null
+        }
+      ],
+      "links": {
+        "first": "https://api.animethemes.moe/api/anime?page[number]=1",
+        "last": "https://api.animethemes.moe/api/anime?page[number]=450",
+        "prev": null,
+        "next": "https://api.animethemes.moe/api/anime?page[number]=2"
+      },
+      "meta": {
+        "current_page": 1,
+        "from": 1,
+        "last_page": 450,
+        "path": "https://api.animethemes.moe/api/anime",
+        "per_page": 15,
+        "to": 15,
+        "total": 6750
+      }
+    }
+    ```
+
+    <Info>
+      All timestamps are in ISO 8601 format (UTC). The `deleted_at` field is null for active resources.
+    </Info>
+  </Step>
+
+  <Step title="Get a specific anime">
+    You can retrieve a specific anime by its ID or slug:
+
+    <CodeGroup>
+      ```bash By ID
+      curl https://api.animethemes.moe/api/anime/1
+      ```
+
+      ```bash By slug
+      curl https://api.animethemes.moe/api/anime/cowboy_bebop
+      ```
+    </CodeGroup>
+
+    The response includes detailed information about the anime:
+
+    ```json Response
+    {
+      "anime": {
+        "id": 1,
+        "name": "Cowboy Bebop",
+        "slug": "cowboy_bebop",
+        "year": 1998,
+        "season": "Spring",
+        "media_format": "TV",
+        "synopsis": "In the year 2071, humanity has colonized...",
+        "created_at": "2017-10-03T18:26:14.000000Z",
+        "updated_at": "2024-01-15T10:30:22.000000Z",
+        "deleted_at": null
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Include related resources">
+    Use the `include` parameter to fetch related data in a single request:
+
+    ```bash Include anime themes
+    curl "https://api.animethemes.moe/api/anime/cowboy_bebop?include=animethemes"
+    ```
+
+    This returns the anime with its themes nested in the response:
+
+    ```json Response with themes
+    {
+      "anime": {
+        "id": 1,
+        "name": "Cowboy Bebop",
+        "slug": "cowboy_bebop",
+        "animethemes": [
+          {
+            "id": 1,
+            "anime_id": 1,
+            "type": "OP",
+            "sequence": 1,
+            "slug": "OP1",
+            "created_at": "2017-10-03T18:26:15.000000Z",
+            "updated_at": "2023-08-20T14:12:30.000000Z"
+          }
+        ]
+      }
+    }
+    ```
+
+    <Tip>
+      You can include multiple relationships by separating them with commas: `include=animethemes,images,studios`
+    </Tip>
+  </Step>
+
+  <Step title="Filter and search">
+    The API supports filtering results using query parameters:
+
+    <CodeGroup>
+      ```bash Filter by year
+      curl "https://api.animethemes.moe/api/anime?filter[year]=2020"
+      ```
+
+      ```bash Filter by season
+      curl "https://api.animethemes.moe/api/anime?filter[season]=Fall&filter[year]=2020"
+      ```
+
+      ```bash Search by name
+      curl "https://api.animethemes.moe/api/anime?filter[name]=bebop"
+      ```
+
+      ```bash Multiple filters
+      curl "https://api.animethemes.moe/api/anime?filter[year]=2020&filter[media_format]=TV&page[size]=25"
+      ```
+    </CodeGroup>
+
+    <Info>
+      See the [filtering documentation](/api/filtering) for advanced filter options and operators.
+    </Info>
+  </Step>
+</Steps>
+
+## Try the GraphQL API
+
+AnimeThemes also provides a GraphQL endpoint for more flexible queries:
+
+```bash GraphQL query
+curl -X POST https://api.animethemes.moe/graphql \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "{ anime(slug: \"cowboy_bebop\") { name year season animethemes { type sequence } } }"
+  }'
+```
+
+<Card title="Explore GraphQL" icon="diagram-project" href="/graphql/introduction">
+  Learn more about using the GraphQL API for complex queries
+</Card>
+
+## Common endpoints
+
+Here are some frequently used endpoints to explore:
+
+<CardGroup cols={2}>
+  <Card title="Anime" icon="tv">
+    `GET /api/anime`
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    Browse all anime in the database
+  </Card>
+  <Card title="Themes" icon="music">
+    `GET /api/animetheme`
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    Get anime opening and ending themes
+  </Card>
+  <Card title="Artists" icon="microphone">
+    `GET /api/artist`
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    Find artists and performers
+  </Card>
+  <Card title="Videos" icon="film">
+    `GET /api/video`
+    
+    Access theme videos and WebMs
+  </Card>
+  <Card title="Songs" icon="music-note">
+    `GET /api/song`
+    
+    Browse theme songs
+  </Card>
+  <Card title="Search" icon="magnifying-glass">
+    `GET /api/search`
+    
+    Search across all resources
+  </Card>
+</CardGroup>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Rate limits
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+The public API has rate limits to ensure fair usage:
 
-### Step 3: Go live
+- **REST API**: 90 requests per minute
+- **GraphQL API**: 90 requests per minute
+- **Video streaming**: 90 requests per minute
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<Warning>
+  If you exceed the rate limit, you'll receive a `429 Too Many Requests` response. Implement exponential backoff in your application to handle rate limits gracefully.
+</Warning>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="REST API reference" icon="book" href="/api/introduction">
+    Explore all available endpoints and parameters
+  </Card>
+  <Card title="Authentication" icon="key" href="/auth/overview">
+    Learn how to authenticate for write operations
+  </Card>
+  <Card title="Pagination" icon="arrows-left-right" href="/api/pagination">
+    Master pagination and cursor-based navigation
+  </Card>
+  <Card title="Install locally" icon="server" href="/installation">
+    Set up your own AnimeThemes Server instance
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

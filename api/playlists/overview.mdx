@@ -1,0 +1,173 @@
+---
+title: Playlist Overview
+description: Overview of playlist functionality and main endpoints
+---
+
+## Introduction
+
+Playlists allow users to create custom collections of anime theme videos. Each playlist contains an ordered list of tracks, where each track references a specific anime theme entry and video combination. Playlists support visibility controls, allowing them to be public, private, or unlisted.
+
+## Key Concepts
+
+### Playlist Structure
+
+A playlist consists of:
+- **Metadata**: Name, description, visibility setting, and owner (user)
+- **Tracks**: Ordered collection of video entries linked via a doubly-linked list structure
+- **Images**: Optional cover images associated with the playlist
+- **First/Last Pointers**: References to the first and last tracks for efficient navigation
+
+### Visibility Settings
+
+Playlists support three visibility levels:
+
+| Value | Description |
+|-------|-------------|
+| `0` | **Public** - Visible to all users and searchable |
+| `1` | **Private** - Only visible to the owner |
+| `2` | **Unlisted** - Accessible via direct link but not searchable |
+
+### Track Ordering
+
+Tracks are organized using a linked list structure where each track maintains references to its previous and next tracks. This allows for efficient reordering and traversal operations.
+
+## Main Endpoints
+
+### List Playlists
+
+```http
+GET /api/playlist
+```
+
+Retrieves all public playlists. Supports filtering, sorting, pagination, and field inclusion via query parameters.
+
+**Response Example:**
+
+```json
+{
+  "playlists": [
+    {
+      "id": "Zk8OvY3e",
+      "name": "Best Opening Themes 2023",
+      "description": "A collection of the best anime opening themes from 2023",
+      "visibility": 0,
+      "created_at": "2023-01-15T10:30:00.000000Z",
+      "updated_at": "2023-06-20T14:45:00.000000Z",
+      "user": {
+        "id": "dGm9p2Xk",
+        "name": "AnimeEnthusiast"
+      }
+    }
+  ]
+}
+```
+
+### Get Playlist
+
+```http
+GET /api/playlist/{playlist}
+```
+
+Retrieves a specific playlist by its hashid. Use query parameters to include related data such as tracks, user, and images.
+
+**Parameters:**
+
+- `{playlist}` - Playlist hashid (e.g., `Zk8OvY3e`)
+
+**Example with Includes:**
+
+```http
+GET /api/playlist/Zk8OvY3e?include=tracks,user,images
+```
+
+**Response Example:**
+
+```json
+{
+  "playlist": {
+    "id": "Zk8OvY3e",
+    "name": "Best Opening Themes 2023",
+    "description": "A collection of the best anime opening themes from 2023",
+    "visibility": 0,
+    "created_at": "2023-01-15T10:30:00.000000Z",
+    "updated_at": "2023-06-20T14:45:00.000000Z",
+    "user": {
+      "id": "dGm9p2Xk",
+      "name": "AnimeEnthusiast"
+    },
+    "tracks": [
+      {
+        "id": "Lm4Rv7Qp",
+        "playlist_id": "Zk8OvY3e",
+        "entry_id": 12345,
+        "video_id": 67890,
+        "created_at": "2023-01-15T11:00:00.000000Z"
+      }
+    ],
+    "images": [
+      {
+        "id": 1001,
+        "path": "playlist/Zk8OvY3e.jpg",
+        "facet": "Cover Large"
+      }
+    ]
+  }
+}
+```
+
+### Navigation Endpoints
+
+#### Forward Traversal
+
+```http
+GET /api/playlist/{playlist}/forward
+```
+
+Retrieves all tracks in the playlist starting from the first track and traversing forward through the linked list. This provides the tracks in their intended playback order.
+
+**Example:**
+
+```http
+GET /api/playlist/Zk8OvY3e/forward?include=video,animethemeentry.animetheme.anime
+```
+
+#### Backward Traversal
+
+```http
+GET /api/playlist/{playlist}/backward
+```
+
+Retrieves all tracks in the playlist starting from the last track and traversing backward through the linked list, providing tracks in reverse playback order.
+
+## Query Parameters
+
+All playlist endpoints support standard query parameters:
+
+- `fields[playlist]` - Select specific playlist fields
+- `fields[track]` - Select specific track fields when included
+- `include` - Include related resources (e.g., `tracks`, `user`, `images`)
+- `filter` - Filter results by specific criteria
+- `sort` - Sort results by field (prefix with `-` for descending)
+- `page[size]` - Number of results per page
+- `page[number]` - Page number for pagination
+
+**Example:**
+
+```http
+GET /api/playlist?fields[playlist]=name,description,visibility&include=user&sort=-created_at&page[size]=10
+```
+
+## Authentication
+
+Most playlist operations require authentication. Only the index and show endpoints are publicly accessible. To create, update, or delete playlists, you must:
+
+1. Be authenticated as a user
+2. Have the `AllowPlaylistManagement` feature enabled
+3. Be the owner of the playlist (for update/delete operations)
+
+See the [Playlist Management](/api/playlists/management) page for details on authenticated operations.
+
+## Related Resources
+
+- [Playlist Track Management](/api/playlists/tracks) - Adding, removing, and reordering tracks
+- [Playlist CRUD Operations](/api/playlists/management) - Creating, updating, and deleting playlists

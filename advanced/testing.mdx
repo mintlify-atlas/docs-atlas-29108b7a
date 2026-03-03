@@ -1,0 +1,486 @@
+---
+title: Testing Guide
+description: Comprehensive guide to testing AnimeThemes Server
+---
+
+## Overview
+
+AnimeThemes Server uses **Pest PHP** as its testing framework, providing an expressive and elegant syntax for writing tests. The test suite includes both unit tests and feature tests to ensure code quality and reliability.
+
+## Test Framework
+
+The project uses:
+- **Pest PHP 4.x**: Modern PHP testing framework
+- **Pest Plugin Laravel**: Laravel-specific testing utilities
+- **PHPUnit**: Underlying test runner (via Pest)
+- **Mockery**: Mocking library
+
+## Test Structure
+
+Tests are organized into two main categories:
+
+```
+tests/
+├── Feature/          # Integration tests
+│   ├── Http/        # HTTP request tests
+│   ├── Jobs/        # Queue job tests
+│   ├── Listeners/   # Event listener tests
+│   └── Scopes/      # Query scope tests
+├── Unit/            # Isolated unit tests
+│   ├── Models/      # Model tests
+│   ├── Rules/       # Validation rule tests
+│   ├── Pivots/      # Pivot model tests
+│   └── ...
+├── Pest.php         # Pest configuration
+└── TestCase.php     # Base test case
+```
+
+## Running Tests
+
+### Run All Tests
+
+```bash
+vendor/bin/pest
+```
+
+Or using the Composer script:
+
+```bash
+composer test
+```
+
+### Run Specific Test Suites
+
+```bash
+# Run only feature tests
+vendor/bin/pest --testsuite=Feature
+
+# Run only unit tests
+vendor/bin/pest --testsuite=Unit
+```
+
+### Run Specific Test Files
+
+```bash
+vendor/bin/pest tests/Feature/Http/Api/Wiki/Video/VideoShowTest.php
+```
+
+### Run Tests with Coverage
+
+```bash
+vendor/bin/pest --coverage
+```
+
+### Filter Tests by Name
+
+```bash
+vendor/bin/pest --filter="video"
+```
+
+## Writing Tests
+
+### Basic Test Structure
+
+Pest uses a functional syntax for defining tests:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use App\Models\Wiki\Video;
+
+test('video can be created', function () {
+    $video = Video::factory()->create();
+    
+    expect($video)->toBeInstanceOf(Video::class);
+    expect($video->exists)->toBeTrue();
+});
+```
+
+### Using Expectations
+
+Pest provides an expressive expectation API:
+
+```php
+test('video has required attributes', function () {
+    $video = Video::factory()->create();
+    
+    expect($video->basename)->toBeString();
+    expect($video->resolution)->toBeInt();
+    expect($video->tags)->toBeString();
+});
+```
+
+### Feature Test Example
+
+Testing API endpoints:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use App\Models\Wiki\Video;
+use function Pest\Laravel\get;
+
+test('can show video via API', function () {
+    $video = Video::factory()->create();
+    
+    $response = get(route('api.video.show', ['video' => $video]));
+    
+    $response->assertOk();
+    $response->assertJsonStructure([
+        'video' => [
+            'id',
+            'basename',
+            'filename',
+            'path',
+        ],
+    ]);
+});
+```
+
+### Unit Test Example
+
+Testing model behavior:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use App\Enums\Models\Wiki\VideoSource;
+use App\Models\Wiki\Video;
+
+test('casts source to enum', function () {
+    $video = Video::factory()->createOne();
+    
+    expect($video->source)->toBeInstanceOf(VideoSource::class);
+});
+
+test('appends tags attribute', function () {
+    $video = Video::factory()->createOne();
+    
+    expect($video)->toHaveKey('tags');
+    expect($video->tags)->toBeString();
+});
+```
+
+### Testing Relationships
+
+```php
+<?php
+
+use App\Models\Wiki\Video;
+use App\Models\Wiki\Audio;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+test('video belongs to audio', function () {
+    $video = Video::factory()
+        ->for(Audio::factory())
+        ->createOne();
+    
+    expect($video->audio())->toBeInstanceOf(BelongsTo::class);
+    expect($video->audio)->toBeInstanceOf(Audio::class);
+});
+```
+
+### Using Datasets
+
+Pest supports data providers for testing multiple scenarios:
+
+```php
+<?php
+
+test('video source priority', function (array $first, array $second) {
+    $videoA = Video::factory()->createOne($first);
+    $videoB = Video::factory()->createOne($second);
+    
+    expect($videoA->priority)
+        ->toBeLessThan($videoB->priority);
+})->with([
+    [
+        ['source' => VideoSource::BD->value],
+        ['source' => VideoSource::WEB->value],
+    ],
+    [
+        ['source' => VideoSource::DVD->value],
+        ['source' => VideoSource::WEB->value],
+    ],
+]);
+```
+
+## Test Configuration
+
+### Pest Configuration
+
+The `tests/Pest.php` file configures global test settings:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+pest()->extend(Tests\TestCase::class)
+    ->use(RefreshDatabase::class)
+    ->in('Feature', 'Unit');
+```
+
+Key features:
+- **RefreshDatabase**: Automatically migrates and refreshes database for each test
+- **TestCase**: Extends base Laravel test case
+- **Traits**: Additional testing traits can be added globally
+
+### PHPUnit Configuration
+
+Test environment settings in `phpunit.xml`:
+
+```xml
+<php>
+    <env name="APP_ENV" value="testing"/>
+    <env name="DB_CONNECTION" value="sqlite"/>
+    <env name="DB_DATABASE" value=":memory:"/>
+    <env name="CACHE_DRIVER" value="array"/>
+    <env name="SESSION_DRIVER" value="array"/>
+    <env name="QUEUE_CONNECTION" value="sync"/>
+    <env name="SCOUT_DRIVER" value="null"/>
+</php>
+```
+
+Features:
+- **In-memory SQLite**: Fast database for testing
+- **Array drivers**: For cache and session
+- **Sync queue**: Execute jobs synchronously
+- **Disabled Scout**: Search functionality turned off
+
+## Factory Usage
+
+### Creating Test Data
+
+Laravel factories generate model instances for testing:
+
+```php
+<?php
+
+use App\Models\Wiki\Video;
+use App\Models\Wiki\Anime;
+use App\Models\Wiki\Anime\AnimeTheme;
+use App\Models\Wiki\Anime\Theme\AnimeThemeEntry;
+
+test('video with relationships', function () {
+    $video = Video::factory()
+        ->for(Audio::factory())
+        ->has(
+            AnimeThemeEntry::factory()
+                ->count(3)
+                ->for(
+                    AnimeTheme::factory()
+                        ->for(Anime::factory())
+                )
+        )
+        ->create();
+    
+    expect($video->audio)->not->toBeNull();
+    expect($video->animethemeentries)->toHaveCount(3);
+});
+```
+
+### Custom States
+
+```php
+<?php
+
+use App\Models\Wiki\Video;
+
+test('trashed video', function () {
+    $video = Video::factory()->trashed()->createOne();
+    
+    expect($video->trashed())->toBeTrue();
+});
+```
+
+## Testing Best Practices
+
+### 1. Arrange-Act-Assert Pattern
+
+```php
+test('video can be soft deleted', function () {
+    // Arrange
+    $video = Video::factory()->create();
+    
+    // Act
+    $video->delete();
+    
+    // Assert
+    expect($video->trashed())->toBeTrue();
+});
+```
+
+### 2. Test One Thing
+
+Each test should verify a single behavior:
+
+```php
+// Good: Tests one specific behavior
+test('nc tag is added when nc is true', function () {
+    $video = Video::factory()->create(['nc' => true]);
+    
+    expect($video->tags)->toContain('NC');
+});
+
+// Avoid: Testing multiple unrelated things
+test('video attributes', function () {
+    // Too broad - split into separate tests
+});
+```
+
+### 3. Use Descriptive Names
+
+```php
+// Good
+test('video storage is not deleted on soft delete', function () {
+    // ...
+});
+
+// Less clear
+test('delete test', function () {
+    // ...
+});
+```
+
+### 4. Clean Up Resources
+
+When working with files or external resources:
+
+```php
+<?php
+
+use Illuminate\Support\Facades\Storage;
+
+test('video file is deleted on force delete', function () {
+    Storage::fake('videos');
+    
+    $video = Video::factory()->create(['path' => 'test.webm']);
+    Storage::disk('videos')->put('test.webm', 'content');
+    
+    $video->forceDelete();
+    
+    Storage::disk('videos')->assertMissing('test.webm');
+});
+```
+
+## Continuous Integration
+
+The project uses GitHub Actions for automated testing:
+
+### Test Workflow
+
+Tests run automatically on:
+- Pull requests
+- Pushes to main branch
+- Manual workflow dispatch
+
+View test status: [Test Workflow](https://github.com/AnimeThemes/animethemes-server/actions/workflows/test.yml)
+
+### Static Analysis Workflow
+
+Runs PHPStan for type checking: [Static Analysis](https://github.com/AnimeThemes/animethemes-server/actions/workflows/static-analysis.yml)
+
+## Common Testing Patterns
+
+### Testing API Filters
+
+```php
+<?php
+
+use App\Http\Api\Parser\FilterParser;
+use App\Models\Wiki\Anime;
+
+test('anime can be filtered by year', function () {
+    $anime2020 = Anime::factory()->create(['year' => 2020]);
+    $anime2021 = Anime::factory()->create(['year' => 2021]);
+    
+    $response = get(route('api.anime.index', [
+        FilterParser::param() => ['year' => 2020],
+    ]));
+    
+    $response->assertJsonFragment(['year' => 2020]);
+    $response->assertJsonMissing(['year' => 2021]);
+});
+```
+
+### Testing Validation Rules
+
+```php
+<?php
+
+use App\Rules\Wiki\Submission\Audio\AudioCodecStream;
+
+test('validates correct audio codec', function () {
+    $rule = new AudioCodecStream();
+    
+    expect($rule->passes('codec', 'opus'))->toBeTrue();
+});
+
+test('rejects invalid audio codec', function () {
+    $rule = new AudioCodecStream();
+    
+    expect($rule->passes('codec', 'invalid'))->toBeFalse();
+});
+```
+
+### Testing Events and Listeners
+
+```php
+<?php
+
+use App\Events\Wiki\Video\VideoCreated;
+use Illuminate\Support\Facades\Event;
+
+test('video created event is dispatched', function () {
+    Event::fake();
+    
+    Video::factory()->create();
+    
+    Event::assertDispatched(VideoCreated::class);
+});
+```
+
+## Debugging Tests
+
+### Run Single Test
+
+```bash
+vendor/bin/pest --filter="video can be created"
+```
+
+### Stop on Failure
+
+```bash
+vendor/bin/pest --stop-on-failure
+```
+
+### Verbose Output
+
+```bash
+vendor/bin/pest --verbose
+```
+
+### Use dd() for Debugging
+
+```php
+test('debug test', function () {
+    $video = Video::factory()->create();
+    
+    dd($video->toArray()); // Dump and die
+});
+```
+
+## Additional Resources
+
+- **Pest Documentation**: https://pestphp.com
+- **Laravel Testing**: https://laravel.com/docs/testing
+- **Test Examples**: Browse `tests/` directory in the repository

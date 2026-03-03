@@ -1,0 +1,371 @@
+---
+title: Filtering and Query Parameters
+description: Learn how to filter, sort, and select fields in API responses
+---
+
+The AnimeThemes API provides powerful filtering, sorting, and field selection capabilities to help you retrieve exactly the data you need.
+
+## Filtering
+
+Filters allow you to narrow down results based on field values.
+
+### Basic Filtering
+
+Use the `filter` parameter to filter resources by field values:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[year]=2020"
+```
+
+This returns all anime from the year 2020.
+
+### Multiple Filters
+
+You can apply multiple filters simultaneously:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[year]=2020&filter[season]=Spring"
+```
+
+This returns anime from Spring 2020.
+
+### Filter Operators
+
+The API supports several filter patterns:
+
+#### Exact Match (Where)
+
+```bash
+filter[field]=value
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[slug]=cowboy_bebop"
+```
+
+#### Multiple Values (WhereIn)
+
+Separate multiple values with commas:
+
+```bash
+filter[field]=value1,value2,value3
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[year]=2019,2020,2021"
+```
+
+This returns anime from 2019, 2020, or 2021.
+
+#### Relationship Existence (Has)
+
+Check if a relationship exists:
+
+```bash
+filter[has]=relationship
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[has]=animethemes"
+```
+
+This returns only anime that have at least one theme.
+
+#### Soft Deleted Records (Trashed)
+
+Include or filter trashed (soft-deleted) records:
+
+```bash
+filter[trashed]=with      # Include trashed records
+filter[trashed]=only      # Only trashed records
+filter[trashed]=without   # Exclude trashed records (default)
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[trashed]=with"
+```
+
+### Scoped Filters
+
+Apply filters to included relationships:
+
+```bash
+filter[relationship][field]=value
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?include=animethemes&filter[animethemes][type]=OP"
+```
+
+This includes only opening themes in the animethemes relationship.
+
+## Sorting
+
+Sort results by one or more fields using the `sort` parameter.
+
+### Ascending Sort
+
+```bash
+sort=field
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?sort=name"
+```
+
+Sorts anime by name in ascending order (A-Z).
+
+### Descending Sort
+
+Prefix the field name with `-` for descending order:
+
+```bash
+sort=-field
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?sort=-year"
+```
+
+Sorts anime by year in descending order (newest first).
+
+### Multiple Sort Fields
+
+Separate multiple sort fields with commas:
+
+```bash
+sort=field1,-field2
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?sort=-year,name"
+```
+
+Sorts by year descending, then by name ascending.
+
+### Random Sort
+
+Get results in random order:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?sort=random"
+```
+
+### Relationship Sorting
+
+Sort by related model fields using dot notation:
+
+```bash
+sort=relationship.field
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/animetheme?sort=anime.year"
+```
+
+## Field Selection (Sparse Fieldsets)
+
+Request only specific fields to reduce response size and improve performance.
+
+### Basic Field Selection
+
+Use the `fields` parameter to specify which fields to include:
+
+```bash
+fields[resource]=field1,field2,field3
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?fields[anime]=id,name,year"
+```
+
+Response:
+```json
+{
+  "anime": [
+    {
+      "id": 1,
+      "name": "Cowboy Bebop",
+      "year": 1998
+    }
+  ]
+}
+```
+
+### Field Selection for Multiple Resources
+
+When including relationships, you can specify fields for each resource type:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?include=animethemes&fields[anime]=id,name&fields[animetheme]=id,type,sequence"
+```
+
+## Including Related Resources
+
+Use the `include` parameter to load related resources.
+
+### Basic Include
+
+```bash
+include=relationship
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?include=animethemes"
+```
+
+### Multiple Includes
+
+Separate multiple relationships with commas:
+
+```bash
+include=relationship1,relationship2
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?include=animethemes,images,studios"
+```
+
+### Nested Includes
+
+Use dot notation to include nested relationships:
+
+```bash
+include=relationship.nested
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?include=animethemes.animethemeentries.videos"
+```
+
+This includes:
+- Anime themes
+- Theme entries within each theme
+- Videos within each entry
+
+### Scoped Includes
+
+Load different relationships for different resource types:
+
+```bash
+include[resource]=relationship1,relationship2
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?include[anime]=animethemes&include[animetheme]=song"
+```
+
+## Search
+
+Perform full-text search across resources:
+
+```bash
+filter[search]=query
+```
+
+Example:
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[search]=cowboy"
+```
+
+The search implementation uses either Elasticsearch or a collection-based driver depending on the server configuration.
+
+## Combining Parameters
+
+All query parameters can be combined for powerful queries:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[year]=2020&filter[season]=Spring&sort=-name&include=animethemes,images&fields[anime]=id,name,slug&page[size]=25"
+```
+
+This request:
+- Filters anime from Spring 2020
+- Sorts by name descending
+- Includes themes and images
+- Selects only id, name, and slug fields
+- Returns 25 results per page
+
+## Best Practices
+
+### Use Field Selection
+
+When you don't need all fields, use sparse fieldsets to improve performance:
+
+```bash
+# Instead of:
+curl "https://api.animethemes.moe/api/anime"
+
+# Use:
+curl "https://api.animethemes.moe/api/anime?fields[anime]=id,name,slug"
+```
+
+### Filter Before Including
+
+Apply filters to the main resource before including relationships:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[year]=2020&include=animethemes"
+```
+
+### Limit Nested Includes
+
+Avoid including too many nested relationships in a single request, as this can impact performance.
+
+### Use Appropriate Page Sizes
+
+Combine filtering with pagination:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[year]=2020&page[size]=50"
+```
+
+## Examples
+
+### Get Anime from 2020 with Themes
+
+```bash
+curl "https://api.animethemes.moe/api/anime?filter[year]=2020&include=animethemes&sort=name"
+```
+
+### Find Specific Song
+
+```bash
+curl "https://api.animethemes.moe/api/song?filter[title]=Tank!&include=artists"
+```
+
+### Get Opening Themes Only
+
+```bash
+curl "https://api.animethemes.moe/api/animetheme?filter[type]=OP&include=anime,song"
+```
+
+### Search for Artist
+
+```bash
+curl "https://api.animethemes.moe/api/artist?filter[search]=yoko%20kanno&include=songs"
+```
+
+### Get Recent Videos
+
+```bash
+curl "https://api.animethemes.moe/api/video?sort=-created_at&page[limit]=20&fields[video]=id,filename,link"
+```
+
+## Related Topics
+
+- [Pagination](/api/pagination) - Paginate filtered results
+- [Rate Limits](/api/rate-limits) - Understand request limits

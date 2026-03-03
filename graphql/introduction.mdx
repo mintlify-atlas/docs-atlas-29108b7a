@@ -1,0 +1,104 @@
+---
+title: GraphQL API Introduction
+description: Get started with the AnimeThemes GraphQL API
+---
+
+The AnimeThemes GraphQL API provides a flexible and efficient way to query anime theme data. GraphQL allows you to request exactly the data you need in a single request.
+
+## GraphQL Endpoint
+
+The GraphQL API is available at:
+
+```
+POST /
+```
+
+All GraphQL requests should be sent as POST requests to the root endpoint.
+
+## GraphiQL Sandbox
+
+AnimeThemes provides an interactive GraphiQL sandbox for exploring the API and testing queries:
+
+```
+GET /sandbox
+```
+
+Visit the sandbox in your browser to:
+- Explore the schema documentation
+- Test queries interactively
+- View autocomplete suggestions
+- See query validation in real-time
+
+## Rate Limiting
+
+The GraphQL API has a rate limit of 90 requests per minute by default. Rate limit information is available in the response headers.
+
+## Basic Query Example
+
+Here's a simple query to fetch an anime by slug:
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    id
+    name
+    slug
+    year
+    season
+    synopsis
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "anime": {
+      "id": 1,
+      "name": "Bakemonogatari",
+      "slug": "bakemonogatari",
+      "year": 2009,
+      "season": "SUMMER",
+      "synopsis": "A production with at least one opening or ending sequence."
+    }
+  }
+}
+```
+
+## Schema Versioning
+
+The current API uses schema version `v1`. This is the default schema and is used for all requests.
+
+## API Features
+
+- **Field Selection**: Request only the fields you need
+- **Nested Resources**: Query related resources in a single request
+- **Filtering**: Advanced filtering with comparison operators and logical conditions
+- **Sorting**: Sort results by any field in ascending or descending order
+- **Pagination**: Efficient pagination with cursor-based or offset-based approaches
+- **Search**: Full-text search across resources
+
+## Query Complexity
+
+To prevent abuse, the API enforces query complexity limits:
+- Maximum query depth: 13 levels
+- Introspection is enabled for schema exploration
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Writing Queries" icon="code" href="/graphql/queries">
+    Learn how to write GraphQL queries
+  </Card>
+  <Card title="Filtering" icon="filter" href="/graphql/filtering">
+    Filter results with advanced conditions
+  </Card>
+  <Card title="Sorting" icon="arrow-down-a-z" href="/graphql/sorting">
+    Sort query results
+  </Card>
+  <Card title="Pagination" icon="list" href="/graphql/pagination">
+    Paginate through large result sets
+  </Card>
+</CardGroup>

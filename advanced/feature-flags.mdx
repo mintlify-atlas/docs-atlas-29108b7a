@@ -1,0 +1,370 @@
+---
+title: Feature Flags
+description: Control application features using Laravel Pennant
+---
+
+AnimeThemes Server uses Laravel Pennant to manage feature flags, allowing you to enable or disable features without deploying new code.
+
+## Overview
+
+Feature flags are stored in the database and can be toggled at runtime. Users with the `BYPASS_FEATURE_FLAGS` permission can always access all features regardless of flag state.
+
+## Available Feature Flags
+
+The following feature flags are available in AnimeThemes Server:
+
+### AllowVideoStreams
+
+Controls whether video streaming is enabled.
+
+**Location:** `app/Features/AllowVideoStreams.php`
+
+```php
+use App\Features\AllowVideoStreams;
+use Laravel\Pennant\Feature;
+
+// Check if video streaming is enabled
+if (Feature::active(AllowVideoStreams::class)) {
+    // Video streaming is enabled
+}
+```
+
+### AllowAudioStreams
+
+Controls whether audio streaming is enabled.
+
+**Location:** `app/Features/AllowAudioStreams.php`
+
+```php
+use App\Features\AllowAudioStreams;
+use Laravel\Pennant\Feature;
+
+// Check if audio streaming is enabled
+if (Feature::active(AllowAudioStreams::class)) {
+    // Audio streaming is enabled
+}
+```
+
+### AllowSubmission
+
+Controls whether users can submit new content (anime, themes, etc.).
+
+**Location:** `app/Features/AllowSubmission.php`
+
+```php
+use App\Features\AllowSubmission;
+use Laravel\Pennant\Feature;
+
+// Check if submissions are enabled
+if (Feature::active(AllowSubmission::class)) {
+    // Submissions are enabled
+}
+```
+
+### AllowPlaylistManagement
+
+Controls whether users can create and manage playlists.
+
+**Location:** `app/Features/AllowPlaylistManagement.php`
+
+```php
+use App\Features\AllowPlaylistManagement;
+use Laravel\Pennant\Feature;
+
+// Check if playlist management is enabled
+if (Feature::active(AllowPlaylistManagement::class)) {
+    // Playlist management is enabled
+}
+```
+
+### AllowExternalProfileManagement
+
+Controls whether users can link and manage external profiles (MyAnimeList, AniList, etc.).
+
+**Location:** `app/Features/AllowExternalProfileManagement.php`
+
+```php
+use App\Features\AllowExternalProfileManagement;
+use Laravel\Pennant\Feature;
+
+// Check if external profile management is enabled
+if (Feature::active(AllowExternalProfileManagement::class)) {
+    // External profile management is enabled
+}
+```
+
+### AllowDumpDownloading
+
+Controls whether database dump downloads are available.
+
+**Location:** `app/Features/AllowDumpDownloading.php`
+
+```php
+use App\Features\AllowDumpDownloading;
+use Laravel\Pennant\Feature;
+
+// Check if dump downloading is enabled
+if (Feature::active(AllowDumpDownloading::class)) {
+    // Dump downloading is enabled
+}
+```
+
+### AllowScriptDownloading
+
+Controls whether video encoding script downloads are available.
+
+**Location:** `app/Features/AllowScriptDownloading.php`
+
+```php
+use App\Features\AllowScriptDownloading;
+use Laravel\Pennant\Feature;
+
+// Check if script downloading is enabled
+if (Feature::active(AllowScriptDownloading::class)) {
+    // Script downloading is enabled
+}
+```
+
+## Configuration
+
+Feature flags are configured in `config/pennant.php`:
+
+```php
+return [
+    'default' => env('PENNANT_STORE', 'database'),
+    
+    'stores' => [
+        'database' => [
+            'driver' => 'database',
+            'connection' => env('DB_CONNECTION', 'mysql_prod'),
+            'table' => 'features',
+        ],
+        
+        'array' => [
+            'driver' => 'array',
+        ],
+    ],
+];
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PENNANT_STORE` | `database` | Feature flag store: `database` or `array` |
+
+## Managing Feature Flags
+
+### Enable a Feature
+
+```bash
+php artisan pennant:activate "App\Features\AllowVideoStreams"
+```
+
+### Disable a Feature
+
+```bash
+php artisan pennant:deactivate "App\Features\AllowVideoStreams"
+```
+
+### Check Feature Status
+
+```bash
+php artisan pennant:list
+```
+
+### Clear Feature Cache
+
+```bash
+php artisan pennant:purge
+```
+
+## Database Structure
+
+Feature flags are stored in the `features` table:
+
+```sql
+CREATE TABLE features (
+    name VARCHAR(255) NOT NULL,
+    scope VARCHAR(255) NOT NULL,
+    value BOOLEAN NOT NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    PRIMARY KEY (name, scope)
+);
+```
+
+## Using Feature Flags in Code
+
+### In Controllers
+
+```php
+use App\Features\AllowVideoStreams;
+use Laravel\Pennant\Feature;
+
+class VideoController extends Controller
+{
+    public function stream(Video $video)
+    {
+        if (!Feature::active(AllowVideoStreams::class)) {
+            abort(403, 'Video streaming is currently disabled');
+        }
+        
+        // Stream the video
+    }
+}
+```
+
+### In Middleware
+
+```php
+use App\Features\AllowSubmission;
+use Closure;
+use Laravel\Pennant\Feature;
+
+class EnsureSubmissionsEnabled
+{
+    public function handle($request, Closure $next)
+    {
+        if (!Feature::active(AllowSubmission::class)) {
+            return response()->json([
+                'message' => 'Submissions are currently disabled'
+            ], 403);
+        }
+        
+        return $next($request);
+    }
+}
+```
+
+### In Blade Templates
+
+```blade
+@feature('App\Features\AllowPlaylistManagement')
+    <button>Create Playlist</button>
+@endfeature
+```
+
+### For Specific Users
+
+All feature flags in AnimeThemes check if the user has the `BYPASS_FEATURE_FLAGS` permission:
+
+```php
+public function resolve(?User $user): bool
+{
+    if ($user?->can(SpecialPermission::BYPASS_FEATURE_FLAGS->value)) {
+        return true;
+    }
+    
+    return Feature::for(null)->value(static::class);
+}
+```
+
+This allows administrators to access features even when they're disabled globally.
+
+## Creating New Feature Flags
+
+To create a new feature flag:
+
+1. Create a new class in `app/Features/`:
+
+```php
+<?php
+
+namespace App\Features;
+
+use App\Enums\Auth\SpecialPermission;
+use App\Models\Auth\User;
+use Laravel\Pennant\Feature;
+
+class AllowNewFeature
+{
+    public function resolve(?User $user): bool
+    {
+        if ($user?->can(SpecialPermission::BYPASS_FEATURE_FLAGS->value)) {
+            return true;
+        }
+        
+        return Feature::for(null)->value(static::class);
+    }
+}
+```
+
+2. Use the feature flag in your code:
+
+```php
+use App\Features\AllowNewFeature;
+use Laravel\Pennant\Feature;
+
+if (Feature::active(AllowNewFeature::class)) {
+    // Feature is enabled
+}
+```
+
+3. Activate the feature:
+
+```bash
+php artisan pennant:activate "App\Features\AllowNewFeature"
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use feature flags for gradual rollouts">
+    Enable new features for a subset of users or environments before rolling out to everyone.
+  </Accordion>
+  
+  <Accordion title="Grant bypass permissions carefully">
+    The `BYPASS_FEATURE_FLAGS` permission allows users to access all features. Only grant this to trusted administrators.
+  </Accordion>
+  
+  <Accordion title="Clean up old feature flags">
+    Once a feature is fully rolled out and stable, remove the feature flag to reduce technical debt.
+  </Accordion>
+  
+  <Accordion title="Document feature flag states">
+    Keep track of which features are enabled in which environments (production, staging, development).
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### Feature flag changes not taking effect
+
+Clear the feature cache:
+
+```bash
+php artisan pennant:purge
+php artisan cache:clear
+```
+
+### Cannot access features table
+
+Ensure the database migration has run:
+
+```bash
+php artisan migrate
+```
+
+The features table is created by Laravel Pennant's migration.
+
+### Feature always enabled/disabled
+
+Check if the user has the `BYPASS_FEATURE_FLAGS` permission, which overrides all feature flag checks.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/advanced/environment">
+    Configure environment variables
+  </Card>
+  <Card title="API Documentation" icon="book" href="/api/overview">
+    Explore the API
+  </Card>
+  <Card title="Storage Configuration" icon="hard-drive" href="/advanced/storage">
+    Set up file storage
+  </Card>
+  <Card title="User Management" icon="users" href="/getting-started/authentication">
+    Manage users and permissions
+  </Card>
+</CardGroup>

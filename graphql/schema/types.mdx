@@ -1,0 +1,307 @@
+---
+title: GraphQL Type System
+description: Overview of the AnimeThemes GraphQL type system, including scalar types, enums, and relationships
+---
+
+The AnimeThemes GraphQL API uses a strongly-typed schema built on GraphQL type system principles. This page explains the core types, scalars, and patterns used throughout the API.
+
+## Scalar Types
+
+Scalars represent primitive values in the GraphQL schema.
+
+### Built-in Scalars
+
+- `Int`: Signed 32-bit integer
+- `String`: UTF-8 character sequence
+- `Boolean`: True or false value
+- `ID`: Unique identifier, serialized as a string
+
+### Custom Scalars
+
+#### Mixed
+
+A flexible scalar type that can represent any JSON-serializable value.
+
+```graphql
+scalar Mixed
+```
+
+Use cases:
+- Dynamic filter values
+- Flexible metadata fields
+- Variable JSON structures
+
+## Enum Types
+
+Enums represent a fixed set of possible values.
+
+### AnimeMediaFormat
+
+Represents the format/medium of an anime production.
+
+```graphql
+enum AnimeMediaFormat {
+  TV
+  MOVIE
+  OVA
+  ONA
+  SPECIAL
+  MUSIC_VIDEO
+}
+```
+
+### AnimeSeason
+
+Represents the broadcast season.
+
+```graphql
+enum AnimeSeason {
+  WINTER
+  SPRING
+  SUMMER
+  FALL
+}
+```
+
+### ThemeType
+
+Represents the type of anime theme.
+
+```graphql
+enum ThemeType {
+  OP  # Opening theme
+  ED  # Ending theme
+  IN  # Insert song
+}
+```
+
+### VideoSource
+
+Represents the source of video files.
+
+```graphql
+enum VideoSource {
+  WEB
+  RAW
+  BD   # Blu-ray Disc
+  DVD
+  VHS
+  LD   # LaserDisc
+}
+```
+
+### VideoOverlap
+
+Represents how the video transitions with the episode.
+
+```graphql
+enum VideoOverlap {
+  NONE    # Clean sequence
+  TRANS   # Transitions to/from episode
+  OVER    # Plays over episode content
+}
+```
+
+## Timestamp Fields
+
+All models include standard timestamp fields:
+
+```graphql
+type ModelTimestamps {
+  created_at: String
+  updated_at: String
+  deleted_at: String  # Present if soft-deleted
+}
+```
+
+Timestamps are returned as ISO 8601 formatted strings.
+
+## Pagination
+
+The API uses cursor-based pagination for collection queries.
+
+### PaginationInfo
+
+```graphql
+type PaginationInfo {
+  total: Int!
+  count: Int!
+  per_page: Int!
+  current_page: Int!
+  total_pages: Int!
+  has_more_pages: Boolean!
+}
+```
+
+### Paginated Response Pattern
+
+```graphql
+type AnimePagination {
+  data: [Anime!]!
+  pagination: PaginationInfo!
+}
+```
+
+## Relationships
+
+The GraphQL schema represents relationships between models using standard GraphQL patterns.
+
+### One-to-Many
+
+Represented as array fields:
+
+```graphql
+type Anime {
+  animethemes: [AnimeTheme!]!
+}
+```
+
+### Many-to-Many
+
+Represented with pivot types:
+
+```graphql
+type Anime {
+  studios: [Studio!]!
+}
+
+type Studio {
+  anime: [Anime!]!
+}
+```
+
+### Polymorphic Relationships
+
+Some relationships are polymorphic (e.g., images, resources):
+
+```graphql
+type Anime {
+  images: [Image!]!
+  resources: [ExternalResource!]!
+}
+
+type Artist {
+  images: [Image!]!
+  resources: [ExternalResource!]!
+}
+```
+
+## Nullable vs Non-Nullable
+
+Field nullability indicates data guarantees:
+
+- `String!` - Required, never null
+- `String` - Optional, may be null
+- `[String!]!` - Required array of required strings (array never null, elements never null)
+- `[String]` - Optional array with optional elements
+
+## Localized Enums
+
+Enum types have corresponding localized fields for human-readable values:
+
+```graphql
+type Anime {
+  season: AnimeSeason
+  season_localized: String  # e.g., "Winter", "Spring"
+}
+```
+
+## Query Arguments
+
+Standard query arguments are available on collection queries:
+
+```graphql
+query {
+  animePagination(
+    first: Int
+    page: Int
+    sort: [AnimeSortableColumn!]
+    filter: AnimeFilterableColumns
+    search: String
+  ) {
+    data {
+      anime_id
+      name
+    }
+  }
+}
+```
+
+### Filter Arguments
+
+Filters use column-specific operators:
+
+```graphql
+input AnimeFilterableColumns {
+  year: IntFilter
+  season: AnimeSeason
+  name: StringFilter
+}
+
+input IntFilter {
+  eq: Int
+  gt: Int
+  gte: Int
+  lt: Int
+  lte: Int
+  in: [Int!]
+}
+
+input StringFilter {
+  contains: String
+  starts_with: String
+  ends_with: String
+}
+```
+
+### Sort Arguments
+
+Sort by one or more fields:
+
+```graphql
+enum AnimeSortableColumn {
+  ANIME_ID
+  NAME
+  YEAR
+  CREATED_AT
+  UPDATED_AT
+}
+
+input SortOrder {
+  column: AnimeSortableColumn!
+  direction: SortDirection!
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+```
+
+## Field Selection
+
+Use GraphQL field selection to request only needed data:
+
+```graphql
+query {
+  anime(anime_id: 1) {
+    name
+    year
+    animethemes {
+      slug
+      song {
+        title
+      }
+    }
+  }
+}
+```
+
+This reduces payload size and improves performance by avoiding unnecessary data transfer.
+
+## Next Steps
+
+- [Anime Type](/graphql/schema/anime) - Anime type and queries
+- [Artist Type](/graphql/schema/artists) - Artist type and queries
+- [Song Type](/graphql/schema/songs) - Song type and queries
+- [Video Type](/graphql/schema/videos) - Video type and queries

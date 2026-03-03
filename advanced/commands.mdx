@@ -1,0 +1,380 @@
+---
+title: Artisan Commands
+description: Custom Artisan commands available in AnimeThemes Server
+---
+
+AnimeThemes Server includes several custom Artisan commands for database management, storage reconciliation, and maintenance tasks.
+
+## Database Commands
+
+### Database Dump Commands
+
+The server provides specialized dump commands for creating sanitized database backups targeting specific table groups.
+
+#### db:dump-wiki
+
+Produces a sanitized database dump targeting wiki-related tables for seeding purposes.
+
+```bash
+php artisan db:dump-wiki [options]
+```
+
+**Options:**
+
+- `--comments` - Write additional information in the MySQL dump (program version, server version, host)
+- `--data-only` - Dump only data without schema (PostgreSQL)
+- `--default-character-set=utf8` - Specify default character set (default: utf8)
+- `--extended-insert` - Use multiple-row INSERT syntax (MySQL)
+- `--inserts` - Dump data as INSERT commands rather than COPY (PostgreSQL)
+- `--lock-tables` - Lock all tables before dumping
+- `--no-create-info` - Turn off CREATE TABLE statements (MySQL)
+- `--quick` - Retrieve rows one at a time (MySQL)
+- `--set-gtid-purged=AUTO` - Add SET GTID_PURGED to output (MySQL, default: AUTO)
+- `--single-transaction=true` - Issue BEGIN before dumping (MySQL, default: true)
+- `--skip-column-statistics` - Turn off ANALYZE table statements (MySQL)
+- `--skip-comments` - Do not write additional information
+- `--skip-extended-insert` - Turn off extended-insert (MySQL)
+- `--skip-lock-tables` - Turn off table locking
+- `--skip-quick` - Do not retrieve rows one at a time
+
+**Location:** app/Console/Commands/Storage/Admin/WikiDumpCommand.php:9
+
+#### db:dump-user
+
+Produces a sanitized database dump targeting user-related tables for seeding purposes.
+
+```bash
+php artisan db:dump-user [options]
+```
+
+Accepts the same options as `db:dump-wiki`.
+
+**Location:** app/Console/Commands/Storage/Admin/UserDumpCommand.php:9
+
+#### db:dump-admin
+
+Produces a sanitized database dump targeting admin-related tables for seeding purposes.
+
+```bash
+php artisan db:dump-admin [options]
+```
+
+Accepts the same options as `db:dump-wiki`.
+
+**Location:** app/Console/Commands/Storage/Admin/AdminDumpCommand.php:9
+
+#### db:dump-auth
+
+Produces a sanitized database dump targeting auth-related tables for seeding purposes.
+
+```bash
+php artisan db:dump-auth [options]
+```
+
+Accepts the same options as `db:dump-wiki`.
+
+**Location:** app/Console/Commands/Storage/Admin/AuthDumpCommand.php:9
+
+#### db:dump-list
+
+Produces a sanitized database dump targeting list-related tables (playlists, external profiles) for seeding purposes.
+
+```bash
+php artisan db:dump-list [options]
+```
+
+Accepts the same options as `db:dump-wiki`.
+
+**Location:** app/Console/Commands/Storage/Admin/ListDumpCommand.php:9
+
+#### db:dump-document
+
+Produces a sanitized database dump targeting document-related tables for seeding purposes.
+
+```bash
+php artisan db:dump-document [options]
+```
+
+Accepts the same options as `db:dump-wiki`.
+
+**Location:** app/Console/Commands/Storage/Admin/DocumentDumpCommand.php:9
+
+#### db:dump-discord
+
+Produces a sanitized database dump targeting discord-related tables for seeding purposes.
+
+```bash
+php artisan db:dump-discord [options]
+```
+
+Accepts the same options as `db:dump-wiki`.
+
+**Location:** app/Console/Commands/Storage/Admin/DiscordDumpCommand.php:9
+
+### Database Sync
+
+#### db:sync
+
+Sync the local database with the latest dumps from the production server.
+
+```bash
+php artisan db:sync [--drop]
+```
+
+**Options:**
+
+- `--drop` - Drop and recreate the database before syncing
+
+**What it does:**
+
+1. Optionally drops and recreates the database
+2. Truncates wiki-related tables
+3. Downloads and imports the latest wiki dump from https://dump.animethemes.moe/latest/wiki
+4. Runs database migrations
+5. Seeds permissions, roles, and features
+6. Imports models for Scout search
+
+**Note:** This command is not allowed in production environments.
+
+**Location:** app/Console/Commands/Database/DatabaseSyncCommand.php:20
+
+**Example:**
+
+```bash
+# Sync without dropping database
+php artisan db:sync
+
+# Sync with fresh database
+php artisan db:sync --drop
+```
+
+## Storage Commands
+
+### Dump Pruning
+
+#### prune:dump
+
+Remove old database dump files from storage.
+
+```bash
+php artisan prune:dump [--hours=72]
+```
+
+**Options:**
+
+- `-H, --hours=72` - The number of hours to retain dumps (default: 72)
+
+**Location:** app/Console/Commands/Storage/Admin/DumpPruneCommand.php:11
+
+**Example:**
+
+```bash
+# Prune dumps older than 72 hours
+php artisan prune:dump
+
+# Prune dumps older than 24 hours
+php artisan prune:dump --hours=24
+```
+
+## Reconciliation Commands
+
+Reconciliation commands perform set reconciliation between object storage and the database.
+
+### reconcile:dump
+
+Perform set reconciliation between object storage and the dump database table.
+
+```bash
+php artisan reconcile:dump
+```
+
+This ensures that dump records in the database match actual files in object storage.
+
+**Location:** app/Console/Commands/Repositories/Storage/Admin/DumpReconcileCommand.php:12
+
+### reconcile:video
+
+Reconcile video files between storage and database.
+
+```bash
+php artisan reconcile:video
+```
+
+**Location:** app/Console/Commands/Repositories/Storage/Wiki/VideoReconcileCommand.php
+
+### reconcile:audio
+
+Reconcile audio files between storage and database.
+
+```bash
+php artisan reconcile:audio
+```
+
+**Location:** app/Console/Commands/Repositories/Storage/Wiki/AudioReconcileCommand.php
+
+### reconcile:script
+
+Reconcile video script files between storage and database.
+
+```bash
+php artisan reconcile:script
+```
+
+**Location:** app/Console/Commands/Repositories/Storage/Wiki/Video/ScriptReconcileCommand.php
+
+## Model Commands
+
+### like:sync-aggregates
+
+Synchronize like counts in the aggregates table.
+
+```bash
+php artisan like:sync-aggregates
+```
+
+This command updates aggregate like counts for models to ensure data consistency.
+
+**Location:** app/Console/Commands/Models/SyncLikeAggregatesCommand.php:12
+
+**Example:**
+
+```bash
+php artisan like:sync-aggregates
+```
+
+### playlist:fix
+
+Fix playlist tracks to remove cycles and ensure proper ordering.
+
+```bash
+php artisan playlist:fix {playlistId}
+```
+
+**Arguments:**
+
+- `playlistId` - The ID of the playlist to fix
+
+**Location:** app/Console/Commands/Models/PlaylistFixCommand.php:14
+
+**Example:**
+
+```bash
+# Fix playlist with ID 123
+php artisan playlist:fix 123
+```
+
+## GraphQL Commands
+
+### graphql:print-schema
+
+Print the GraphQL schema in SDL (Schema Definition Language) format.
+
+```bash
+php artisan graphql:print-schema [schema=v1]
+```
+
+**Arguments:**
+
+- `schema` - The schema name to print (default: v1)
+
+**Location:** app/Console/Commands/GraphQL/GraphQLPrintSchemaCommand.php:14
+
+**Example:**
+
+```bash
+# Print default v1 schema
+php artisan graphql:print-schema
+
+# Print specific schema
+php artisan graphql:print-schema v2
+```
+
+## Command Best Practices
+
+### Dump Commands
+
+1. **Use appropriate dump types**: Choose the specific dump command for your needs (wiki, user, admin, etc.)
+2. **Set character set**: Always use `--default-character-set=utf8` for consistency
+3. **Use transactions**: Keep `--single-transaction=true` for consistent snapshots
+4. **Skip statistics**: Use `--skip-column-statistics` to reduce dump size
+
+**Recommended dump options:**
+
+```bash
+php artisan db:dump-wiki \
+  --default-character-set=utf8 \
+  --single-transaction=true \
+  --skip-column-statistics \
+  --extended-insert
+```
+
+### Database Sync
+
+1. **Use in development only**: Never run in production
+2. **Backup first**: Always backup your local database before syncing
+3. **Use --drop for clean state**: When starting fresh, use the `--drop` flag
+
+### Reconciliation
+
+1. **Run regularly**: Schedule reconciliation commands to run periodically
+2. **Monitor output**: Check command output for inconsistencies
+3. **Run after imports**: Always reconcile after bulk imports or migrations
+
+### Maintenance Schedule
+
+Consider scheduling these commands in your task scheduler:
+
+```php
+// In app/Console/Kernel.php
+protected function schedule(Schedule $schedule)
+{
+    // Prune old dumps daily
+    $schedule->command('prune:dump')->daily();
+    
+    // Reconcile storage weekly
+    $schedule->command('reconcile:dump')->weekly();
+    $schedule->command('reconcile:video')->weekly();
+    $schedule->command('reconcile:audio')->weekly();
+    
+    // Sync aggregates daily
+    $schedule->command('like:sync-aggregates')->daily();
+}
+```
+
+## Common Workflows
+
+### Creating a Production Dump
+
+```bash
+# Create dumps for all table groups
+php artisan db:dump-wiki --default-character-set=utf8 --single-transaction=true
+php artisan db:dump-user --default-character-set=utf8 --single-transaction=true
+php artisan db:dump-admin --default-character-set=utf8 --single-transaction=true
+php artisan db:dump-auth --default-character-set=utf8 --single-transaction=true
+php artisan db:dump-list --default-character-set=utf8 --single-transaction=true
+
+# Verify dumps were created
+php artisan reconcile:dump
+```
+
+### Setting Up a New Development Environment
+
+```bash
+# Sync database with latest production data
+php artisan db:sync --drop
+
+# Verify storage reconciliation
+php artisan reconcile:video
+php artisan reconcile:audio
+php artisan reconcile:dump
+```
+
+### Cleaning Up Storage
+
+```bash
+# Remove dumps older than 24 hours
+php artisan prune:dump --hours=24
+
+# Reconcile to remove orphaned records
+php artisan reconcile:dump
+```

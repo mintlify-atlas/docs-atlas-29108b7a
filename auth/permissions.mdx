@@ -1,0 +1,341 @@
+---
+title: Role-Based Permissions
+description: Understanding roles and permissions in AnimeThemes Server
+---
+
+AnimeThemes Server implements role-based access control using the [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission) package. This system controls access to resources and actions throughout the application.
+
+## Configuration
+
+Permissions are configured in `config/permission.php`.
+
+### Models
+
+Custom permission models extend Spatie's base models:
+
+```php
+'models' => [
+    'permission' => App\Models\Auth\Permission::class,
+    'role' => App\Models\Auth\Role::class,
+],
+```
+
+### Caching
+
+Permissions are cached for 24 hours for performance:
+
+```php
+'cache' => [
+    'expiration_time' => DateInterval::createFromDateString('24 hours'),
+    'key' => 'spatie.permission.cache',
+    'store' => 'default',
+],
+```
+
+The cache is automatically flushed when permissions or roles are updated.
+
+## Available Roles
+
+Roles are defined in `app/Enums/Auth/Role.php` with priorities and colors:
+
+### Admin
+- **Priority**: 250,000
+- **Color**: #1F8B4C (Green)
+- **Description**: Full system access with all permissions
+
+### Encoder
+- **Priority**: 150,000
+- **Color**: #FFC107 (Amber)
+- **Description**: Manage video encoding and processing
+
+### Developer
+- **Priority**: 125,000
+- **Color**: #FF69B4 (Pink)
+- **Description**: API access and development features
+- **Special Permissions**: `view filament`
+
+### Content Moderator
+- **Priority**: 100,000
+- **Color**: #2E5A88 (Blue)
+- **Description**: Moderate wiki content and user submissions
+
+### Patron
+- **Priority**: 75,000
+- **Color**: #E74C3C (Red)
+- **Description**: Supporter perks and features
+
+### Contributor
+- **Priority**: 50,000
+- **Color**: #052C41 (Dark Blue)
+- **Description**: Contribute wiki content
+
+### Panel Viewer
+- **Priority**: 25,000
+- **Color**: #2596D1 (Light Blue)
+- **Description**: View-only access to admin panel
+
+### Verified
+- **Priority**: 0
+- **Description**: Basic verified user status
+
+## Permission Types
+
+### CRUD Permissions
+
+Standard create, read, update, delete operations (app/Enums/Auth/CrudPermission.php):
+
+- `view` - View resources
+- `create` - Create new resources
+- `update` - Modify existing resources
+- `delete` - Soft delete resources
+
+### Extended CRUD Permissions
+
+Additional operations for soft-deletable resources:
+
+- `restore` - Restore soft-deleted resources
+- `force delete` - Permanently delete resources
+
+### Special Permissions
+
+Defined in `app/Enums/Auth/SpecialPermission.php`:
+
+#### API & Rate Limiting
+- `bypass api rate limiter` - Bypass API rate limits
+- `bypass graphql rate limiter` - Bypass GraphQL rate limits
+
+#### Authorization
+- `bypass authorization` - Bypass all authorization checks
+- `bypass feature flags` - Access features behind feature flags
+
+#### Panel Access
+- `view filament` - Access Filament admin panel
+- `view horizon` - Access Laravel Horizon dashboard
+- `view pulse` - Access Laravel Pulse monitoring
+
+#### User Actions
+- `make submission` - Submit wiki content for review
+- `revalidate pages` - Trigger page cache revalidation
+
+## Permission Format
+
+Permissions follow the pattern: `{action} {resource}`
+
+Example permissions (from database/seeders/Auth/Permission/PermissionSeeder.php):
+
+- `view anime` - View anime resources
+- `create video` - Create video resources
+- `update artist` - Modify artist resources
+- `delete song` - Delete song resources
+- `force delete user` - Permanently delete users
+
+## Using Permissions
+
+### Checking Permissions in Code
+
+The `User` model uses the `HasRoles` trait (app/Models/Auth/User.php:71):
+
+```php
+use Spatie\Permission\Traits\HasRoles;
+
+class User extends Authenticatable
+{
+    use HasRoles;
+    // ...
+}
+```
+
+### Check User Permissions
+
+```php
+// Check if user has a permission
+if ($user->hasPermissionTo('view anime')) {
+    // User can view anime
+}
+
+// Check if user has any of the permissions
+if ($user->hasAnyPermission(['create video', 'update video'])) {
+    // User can create or update videos
+}
+
+// Check if user has all permissions
+if ($user->hasAllPermissions(['view anime', 'view artist'])) {
+    // User can view both anime and artists
+}
+```
+
+### Check User Roles
+
+```php
+// Check if user has a role
+if ($user->hasRole('Admin')) {
+    // User is an admin
+}
+
+// Check if user has any of the roles
+if ($user->hasAnyRole(['Admin', 'Content Moderator'])) {
+    // User is admin or content moderator
+}
+```
+
+### Using Laravel Gates
+
+Example from `PermissionPolicy` (app/Policies/Auth/PermissionPolicy.php:20):
+
+```php
+public function viewAny(?User $user, mixed $value = null): Response
+{
+    return $user?->can(CrudPermission::VIEW->format(Permission::class))
+        ? Response::allow()
+        : Response::deny();
+}
+```
+
+### Filament Panel Access
+
+From `User` model (app/Models/Auth/User.php:180):
+
+```php
+public function canAccessPanel(Panel $panel): bool
+{
+    if ($panel->getId() === 'submission') {
+        return $this->hasAnyPermission(SpecialPermission::MAKE_SUBMISSION->value);
+    }
+
+    if ($this->hasVerifiedEmail() && $this->hasAnyPermission(SpecialPermission::VIEW_FILAMENT->value)) {
+        return true;
+    }
+
+    return $this->hasAnyPermission(SpecialPermission::BYPASS_AUTHORIZATION->value);
+}
+```
+
+Requirements:
+- Email must be verified
+- User must have `view filament` permission
+- OR user has `bypass authorization` permission
+
+## Permission Seeding
+
+Permissions are seeded for all major resources (database/seeders/Auth/Permission/PermissionSeeder.php:54):
+
+### Admin Resources
+- Announcements
+- Database dumps
+- Features
+- Featured themes
+
+### Auth Resources
+- Permissions (view only)
+- Roles (full CRUD)
+- Users (extended CRUD)
+- Sanctions (full CRUD)
+
+### Wiki Resources
+- Anime (extended CRUD)
+- Artists (extended CRUD)
+- Songs (extended CRUD)
+- Videos (extended CRUD)
+- Images (extended CRUD)
+- And many more...
+
+### List Resources
+- Playlists (full CRUD)
+- External profiles (full CRUD)
+
+### User Resources
+- Likes (full CRUD)
+- Notifications (full CRUD)
+- Submissions (full CRUD)
+
+## Role Permissions Example
+
+From `DeveloperRoleSeeder` (database/seeders/Auth/Role/DeveloperRoleSeeder.php:47):
+
+```php
+$roleEnum = RoleEnum::DEVELOPER;
+
+$role = Role::findOrCreate($roleEnum->value);
+
+// View-only access to wiki resources
+$this->configureResource($role, Anime::class, [CrudPermission::VIEW]);
+$this->configureResource($role, Artist::class, [CrudPermission::VIEW]);
+$this->configureResource($role, Video::class, [CrudPermission::VIEW]);
+
+// Full access to user resources
+$this->configureResource($role, ExternalProfile::class, CrudPermission::cases());
+$this->configureResource($role, Playlist::class, CrudPermission::cases());
+
+// Special permissions
+$this->configureAbilities($role, [
+    SpecialPermission::VIEW_FILAMENT->value,
+]);
+```
+
+## Middleware
+
+Permissions can be enforced via middleware:
+
+```php
+// Check permission
+Route::get('/admin', AdminController::class)
+    ->middleware('permission:view filament');
+
+// Check role
+Route::get('/encoder', EncoderController::class)
+    ->middleware('role:Encoder');
+
+// Check role or permission
+Route::get('/content', ContentController::class)
+    ->middleware('role_or_permission:Admin|view anime');
+```
+
+## Database Schema
+
+The permission system uses several tables:
+
+- `permissions` - Available permissions
+- `roles` - Available roles with priority and color
+- `model_has_permissions` - Direct user permissions
+- `model_has_roles` - User role assignments
+- `role_has_permissions` - Permissions assigned to roles
+
+## Best Practices
+
+### Assign Permissions to Roles
+
+Prefer assigning permissions to roles rather than directly to users:
+
+```php
+// Good: Assign role to user
+$user->assignRole('Content Moderator');
+
+// Less ideal: Assign permission directly
+$user->givePermissionTo('view anime');
+```
+
+### Check Permissions, Not Roles
+
+In policies and gates, check permissions rather than roles:
+
+```php
+// Good: Check permission
+if ($user->can('update anime', $anime)) {
+    // ...
+}
+
+// Less flexible: Check role
+if ($user->hasRole('Admin')) {
+    // ...
+}
+```
+
+### Use Policy Classes
+
+Define authorization logic in policy classes for cleaner code and better organization.
+
+## Next Steps
+
+- [Authentication Overview](/auth/overview) - Understanding authentication flow
+- [Laravel Sanctum](/auth/sanctum) - API token authentication
+- [Spatie Permission Docs](https://spatie.be/docs/laravel-permission) - Official package documentation

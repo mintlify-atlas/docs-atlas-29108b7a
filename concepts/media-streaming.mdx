@@ -1,0 +1,341 @@
+---
+title: Media Streaming
+description: How AnimeThemes streams video and audio files
+---
+
+AnimeThemes supports multiple streaming methods for delivering video and audio files to clients. The streaming method can be configured based on your infrastructure.
+
+## Streaming Methods
+
+The server supports two primary streaming methods:
+
+### Response Streaming
+
+Streams media directly through the Laravel application using PHP.
+
+**Configuration:**
+```bash
+VIDEO_STREAMING_METHOD=response
+AUDIO_STREAMING_METHOD=response
+```
+
+**How it works:**
+- Laravel reads the file from storage (local or S3)
+- Streams the content through PHP using `StreamedResponse`
+- Includes proper headers for range requests and content type
+
+**Implementation:**
+
+```php
+// app/Actions/Http/ResponseStreamAction.php
+public function stream(string $disposition = 'inline'): StreamedResponse
+{
+    $response = new StreamedResponse();
+
+    $disposition = $response->headers->makeDisposition($disposition, $this->streamable->basename());
+
+    $response->headers->replace([
+        'Accept-Ranges' => 'bytes',
+        'Content-Type' => $this->streamable->mimetype(),
+        'Content-Length' => $this->streamable->size(),
+        'Content-Disposition' => $disposition,
+    ]);
+
+    $fs = Storage::disk($this->disk());
+
+    $response->setCallback(function () use ($fs): void {
+        $stream = $fs->readStream($this->streamable->path());
+        fpassthru($stream);
+        fclose($stream);
+    });
+
+    return $response;
+}
+```
+
+**Pros:**
+- Simple setup, no additional infrastructure required
+- Works with any storage backend
+- Full application control over access and logging
+
+**Cons:**
+- Higher CPU usage on app servers
+- Not as efficient for large files
+- Uses PHP process resources during streaming
+
+### Nginx Streaming
+
+Uses nginx's `X-Accel-Redirect` to offload streaming to nginx.
+
+**Configuration:**
+```bash
+VIDEO_STREAMING_METHOD=nginx
+VIDEO_NGINX_REDIRECT=/redirect/videos/
+
+AUDIO_STREAMING_METHOD=nginx
+AUDIO_NGINX_REDIRECT=/redirect/audio/
+```
+
+**How it works:**
+- Laravel generates a temporary signed URL to the file storage
+- Returns a response with `X-Accel-Redirect` header
+- Nginx intercepts and serves the file directly
+
+**Implementation:**
+
+```php
+// app/Actions/Http/NginxStreamAction.php
+public function stream(string $disposition = 'inline'): Response
+{
+    $fs = Storage::disk($this->disk());
+
+    // Generate temporary URL (5 minutes)
+    $temporaryURL = $fs->temporaryUrl($this->streamable->path(), now()->addMinutes(5));
+
+    // Parse URL components
+    $url_scheme = parse_url($temporaryURL, PHP_URL_SCHEME);
+    $url_host = parse_url($temporaryURL, PHP_URL_HOST);
+    $url_path_query = parse_url($temporaryURL, PHP_URL_PATH).'?'.parse_url($temporaryURL, PHP_URL_QUERY);
+
+    $link = "{$this->nginxRedirect()}$url_scheme/$url_host$url_path_query";
+
+    $response = new Response();
+
+    $disposition = $response->headers->makeDisposition($disposition, $this->streamable->basename());
+
+    return $response->withHeaders([
+        'Accept-Ranges' => 'bytes',
+        'Content-Type' => $this->streamable->mimetype(),
+        'Content-Length' => $this->streamable->size(),
+        'Content-Disposition' => $disposition,
+        'X-Accel-Redirect' => $link,
+    ]);
+}
+```
+
+**Nginx Configuration Example:**
+
+```nginx
+location /redirect/videos/ {
+    internal;
+    proxy_pass $request_uri;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+}
+```
+
+**Pros:**
+- Offloads streaming to nginx (much more efficient)
+- Frees up PHP workers immediately
+- Better performance for concurrent streams
+- Native range request support
+
+**Cons:**
+- Requires nginx configuration
+- More complex setup
+- Only works with S3-compatible storage (for temporary URLs)
+
+## Environment Configuration
+
+### Video Streaming
+
+```bash
+# Storage configuration
+VIDEO_DISK_DEFAULT=videos_local
+VIDEO_DISKS=videos_local
+VIDEO_DISK_ROOT=/path/to/videos
+VIDEO_PATH=/video
+VIDEO_URL=https://example.com
+
+# Streaming method
+VIDEO_STREAMING_METHOD=response  # or 'nginx'
+
+# Nginx redirect path (only for nginx method)
+VIDEO_NGINX_REDIRECT=/redirect/videos/
+
+# Rate limiting
+VIDEO_RATE_LIMITER=90  # requests per minute
+```
+
+### Audio Streaming
+
+```bash
+# Storage configuration
+AUDIO_DISK_DEFAULT=audios_local
+AUDIO_DISKS=audios_local
+AUDIO_DISK_ROOT=/path/to/audio
+AUDIO_PATH=/audio
+AUDIO_URL=https://example.com
+
+# Streaming method
+AUDIO_STREAMING_METHOD=response  # or 'nginx'
+
+# Nginx redirect path (only for nginx method)
+AUDIO_NGINX_REDIRECT=/redirect/audio/
+```
+
+## Storage Backends
+
+AnimeThemes supports multiple storage backends:
+
+### Local Storage
+
+Files stored on the local filesystem.
+
+```bash
+VIDEO_DISK_DEFAULT=videos_local
+VIDEO_DISK_ROOT=/var/www/storage/videos
+```
+
+**Best for:**
+- Development environments
+- Single-server deployments
+
+### S3-Compatible Storage
+
+Files stored on AWS S3 or compatible services (DigitalOcean Spaces, Wasabi, etc.).
+
+```bash
+# NYC region
+VIDEO_NYC_ACCESS_KEY_ID=your_key
+VIDEO_NYC_SECRET_ACCESS_KEY=your_secret
+VIDEO_NYC_DEFAULT_REGION=nyc3
+VIDEO_NYC_ENDPOINT=https://nyc3.digitaloceanspaces.com
+VIDEO_NYC_BUCKET=animethemes-videos
+
+# FRA region  
+VIDEO_FRA_ACCESS_KEY_ID=your_key
+VIDEO_FRA_SECRET_ACCESS_KEY=your_secret
+VIDEO_FRA_DEFAULT_REGION=fra1
+VIDEO_FRA_ENDPOINT=https://fra1.digitaloceanspaces.com
+VIDEO_FRA_BUCKET=animethemes-videos
+```
+
+**Best for:**
+- Production deployments
+- Geographic distribution
+- Scalable storage
+
+<Note>
+AnimeThemes supports multiple disks per media type (e.g., `videos_nyc` and `videos_fra`). The system can select the optimal disk based on client location or availability.
+</Note>
+
+## Streamable Interface
+
+Both Video and Audio models implement the `Streamable` interface:
+
+```php
+// app/Contracts/Models/Streamable.php
+interface Streamable
+{
+    public function path(): string;
+    public function basename(): string;
+    public function mimetype(): string;
+    public function size(): int;
+}
+```
+
+This allows streaming actions to work with either resource type.
+
+## Streaming Actions
+
+Action classes handle streaming for specific resource types:
+
+### Video Actions
+
+- `App\Actions\Http\Wiki\Video\VideoNginxStreamAction` - Nginx streaming for videos
+- `App\Actions\Http\Wiki\Video\VideoResponseStreamAction` - Response streaming for videos
+
+### Audio Actions
+
+- `App\Actions\Http\Wiki\Audio\AudioNginxStreamAction` - Nginx streaming for audio
+- `App\Actions\Http\Wiki\Audio\AudioResponseStreamAction` - Response streaming for audio
+
+## Content Delivery
+
+### Headers
+
+All streaming responses include:
+
+```http
+Accept-Ranges: bytes
+Content-Type: video/webm (or appropriate MIME type)
+Content-Length: 12345678
+Content-Disposition: inline; filename="Bakemonogatari-OP1.webm"
+```
+
+### MIME Types
+
+Common MIME types:
+
+- Videos: `video/webm`, `video/mp4`
+- Audio: `audio/ogg`, `audio/opus`, `audio/mpeg`
+
+### Range Requests
+
+Both streaming methods support HTTP range requests, enabling:
+- Video seeking
+- Resume after disconnect
+- Partial content delivery
+
+## Rate Limiting
+
+<Warning>
+Video streaming endpoints are rate-limited to prevent abuse. The default limit is 90 requests per minute per IP address.
+</Warning>
+
+Configure the rate limit:
+
+```bash
+VIDEO_RATE_LIMITER=90
+```
+
+## Best Practices
+
+### For Small Deployments
+
+1. Use `response` streaming method
+2. Store files locally
+3. Consider caching layer (Cloudflare, CDN)
+
+### For Large Deployments
+
+1. Use `nginx` streaming method
+2. Store files on S3-compatible storage
+3. Use multiple regions for geographic distribution
+4. Configure CDN in front of origin servers
+5. Monitor bandwidth and storage costs
+
+### Cache Headers
+
+Consider adding cache headers in your reverse proxy:
+
+```nginx
+location /video/ {
+    proxy_pass http://backend;
+    proxy_cache_valid 200 1d;
+    add_header Cache-Control "public, max-age=86400";
+}
+```
+
+## Troubleshooting
+
+### Nginx streaming not working
+
+1. Check `X-Accel-Redirect` is configured in nginx
+2. Verify `internal;` directive in location block
+3. Ensure temporary URLs are being generated correctly
+4. Check storage credentials and permissions
+
+### Slow streaming performance
+
+1. Switch from `response` to `nginx` method
+2. Enable CDN caching
+3. Check storage backend performance
+4. Monitor PHP-FPM worker availability
+
+### Range requests failing
+
+1. Verify storage backend supports range requests
+2. Check nginx configuration preserves range headers
+3. Ensure proper `Accept-Ranges` header is sent

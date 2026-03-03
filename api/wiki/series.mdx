@@ -1,0 +1,258 @@
+---
+title: 'Series'
+description: 'Series resource endpoints for managing anime series collections'
+---
+
+## Overview
+
+The Series resource represents collections of related anime. A series groups multiple anime titles together, such as different seasons or related shows in a franchise.
+
+## List Series
+
+<ParamField path="GET" type="endpoint">
+  /api/series
+</ParamField>
+
+Retrieve a paginated list of series.
+
+### Query Parameters
+
+<ParamField query="page[size]" type="integer">
+  Number of results per page (default: 15, max: 100)
+</ParamField>
+
+<ParamField query="page[number]" type="integer">
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relationships to include. Available includes:
+  - `anime` - Anime in this series
+  - `anime.animesynonyms` - Anime synonyms/alternative titles
+  - `anime.images` - Images for anime in the series
+  - `anime.animethemes` - Themes for anime in the series
+  - `anime.studios` - Studios for anime in the series
+</ParamField>
+
+<ParamField query="filter[name]" type="string">
+  Filter by series name
+</ParamField>
+
+<ParamField query="fields[series]" type="string">
+  Comma-separated list of fields to return. Available fields:
+  - `series_id`
+  - `name`
+  - `slug`
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort by field. Prefix with `-` for descending order.
+  Available: `name`, `created_at`, `updated_at`
+</ParamField>
+
+<ParamField query="q" type="string">
+  Full-text search query across series names and anime
+</ParamField>
+
+### Response
+
+<ResponseField name="series" type="array">
+  Array of series objects
+  
+  <ResponseField name="series_id" type="integer">
+    Unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Series name
+  </ResponseField>
+  
+  <ResponseField name="slug" type="string">
+    URL-friendly identifier
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/series?include=anime&page[size]=10"
+```
+
+### Example Response
+
+```json
+{
+  "series": [
+    {
+      "series_id": 1,
+      "name": "Monogatari",
+      "slug": "monogatari",
+      "created_at": "2024-01-15T12:00:00.000000Z",
+      "updated_at": "2024-01-15T12:00:00.000000Z",
+      "anime": [
+        {
+          "anime_id": 101,
+          "name": "Bakemonogatari",
+          "slug": "bakemonogatari",
+          "year": 2009,
+          "season": "Summer"
+        },
+        {
+          "anime_id": 102,
+          "name": "Nisemonogatari",
+          "slug": "nisemonogatari",
+          "year": 2012,
+          "season": "Winter"
+        },
+        {
+          "anime_id": 103,
+          "name": "Nekomonogatari: Kuro",
+          "slug": "nekomonogatari_kuro",
+          "year": 2012,
+          "season": "Winter"
+        }
+      ]
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/series?page[number]=1",
+    "next": "https://api.animethemes.moe/api/series?page[number]=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 10
+  }
+}
+```
+
+## Show Series
+
+<ParamField path="GET" type="endpoint">
+  /api/series/:slug
+</ParamField>
+
+Retrieve a single series by its slug.
+
+### Path Parameters
+
+<ParamField path="slug" type="string" required>
+  The series slug (URL-friendly identifier)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Same includes as list endpoint
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/series/monogatari?include=anime.animethemes,anime.images"
+```
+
+### Example Response
+
+```json
+{
+  "series": {
+    "series_id": 1,
+    "name": "Monogatari",
+    "slug": "monogatari",
+    "created_at": "2024-01-15T12:00:00.000000Z",
+    "updated_at": "2024-01-15T12:00:00.000000Z",
+    "anime": [
+      {
+        "anime_id": 101,
+        "name": "Bakemonogatari",
+        "slug": "bakemonogatari",
+        "year": 2009,
+        "season": "Summer",
+        "animethemes": [
+          {
+            "theme_id": 501,
+            "type": "OP",
+            "sequence": 1,
+            "slug": "OP1"
+          },
+          {
+            "theme_id": 502,
+            "type": "OP",
+            "sequence": 2,
+            "slug": "OP2"
+          }
+        ],
+        "images": [
+          {
+            "image_id": 201,
+            "facet": "Cover",
+            "link": "https://animethemes.moe/storage/images/bakemonogatari_cover.jpg"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Create Series
+
+<ParamField path="POST" type="endpoint">
+  /api/series
+</ParamField>
+
+Create a new series. Requires authentication.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Series name
+</ParamField>
+
+<ParamField body="slug" type="string" required>
+  URL-friendly identifier (unique)
+</ParamField>
+
+## Update Series
+
+<ParamField path="PUT" type="endpoint">
+  /api/series/:slug
+</ParamField>
+
+Update an existing series. Requires authentication.
+
+### Request Body
+
+Same fields as create endpoint (all optional).
+
+## Delete Series
+
+<ParamField path="DELETE" type="endpoint">
+  /api/series/:slug
+</ParamField>
+
+Soft delete a series. Requires authentication.
+
+## Restore Series
+
+<ParamField path="PATCH" type="endpoint">
+  /restore/series/:slug
+</ParamField>
+
+Restore a soft-deleted series. Requires authentication.
+
+## Force Delete Series
+
+<ParamField path="DELETE" type="endpoint">
+  /forceDelete/series/:slug
+</ParamField>
+
+Permanently delete a series. Requires authentication.

@@ -1,0 +1,223 @@
+---
+title: Admin Panel
+description: Using the Filament admin panel to manage AnimeThemes Server
+---
+
+AnimeThemes Server uses [Filament](https://filamentphp.com/) as its admin panel framework, providing a comprehensive interface for managing all aspects of the application.
+
+## Accessing the Admin Panel
+
+The admin panel is accessible at the path configured in your `config/filament.php` file (typically `/admin`). You'll need to log in with a user account that has appropriate permissions.
+
+```
+https://your-domain.com/admin
+```
+
+### Authentication
+
+The panel uses Laravel's authentication system with role-based access control. Only authenticated users with admin permissions can access the panel.
+
+## Available Resources
+
+The admin panel provides access to 37+ resources organized into navigation groups:
+
+### Content Resources (CONTENT)
+
+Wiki-related resources for managing anime themes content:
+
+- **Anime** - Manage anime entries and their metadata
+- **Artists** - Artist information and profiles
+- **Songs** - Song metadata and performances
+- **Themes** - Anime themes and entries
+- **Videos** - Video files and metadata
+- **Audio** - Audio tracks
+- **Images** - Image assets
+- **Series** - Anime series groupings
+- **Studios** - Animation studios
+- **Groups** - Artist groups
+- **Synonyms** - Alternative names for anime
+- **External Resources** - Links to external sites
+- **Scripts** - Video script metadata
+- **Performances** - Artist song performances
+- **Memberships** - Artist group memberships
+
+### Admin Resources (ADMIN)
+
+Administrative features and system management:
+
+- **Dumps** - Database backup files (app/Filament/Resources/Admin/DumpResource.php:28)
+- **Featured Themes** - Highlighted themes on the site
+- **Features** - Feature flags and toggles
+- **Announcements** - Site-wide announcements
+- **Action Logs** - Audit trail of admin actions
+
+### Authentication (AUTH)
+
+User and permission management:
+
+- **Users** - User accounts and profiles (app/Filament/Resources/Auth/UserResource.php:36)
+- **Roles** - User roles and role management (app/Filament/Resources/Auth/RoleResource.php:35)
+- **Permissions** - Permission definitions (app/Filament/Resources/Auth/PermissionResource.php:27)
+- **Sanctions** - User sanctions and bans
+- **Prohibitions** - Access restrictions
+
+### Document Resources (DOCUMENT)
+
+Documentation and content pages:
+
+- **Pages** - Static content pages
+
+### Discord Resources (DISCORD)
+
+Discord integration:
+
+- **Discord Threads** - Discord thread management
+
+### List Resources (LIST)
+
+Playlist and profile management:
+
+- **Playlists** - User playlists
+- **Tracks** - Playlist tracks
+- **External Profiles** - External profile integrations
+- **External Entries** - External profile entries
+
+### User Resources (USER)
+
+User-generated content:
+
+- **Submissions** - User submissions
+- **Submission Stages** - Submission workflow stages
+
+## Roles and Permissions
+
+The admin panel uses a comprehensive role-based access control system.
+
+### Role Management
+
+Roles are managed through the **Roles** resource in the AUTH navigation group. Each role has:
+
+- **Name** - Human-readable role name
+- **Default** - Whether the role is assigned to new users automatically
+- **Color** - Display color for the role
+- **Priority** - Numerical priority for role hierarchy
+
+Key role attributes (from app/Filament/Resources/Auth/RoleResource.php:35):
+
+```php
+Role::ATTRIBUTE_NAME      // Role name
+Role::ATTRIBUTE_DEFAULT   // Auto-assign flag
+Role::ATTRIBUTE_COLOR     // Display color
+Role::ATTRIBUTE_PRIORITY  // Hierarchy priority
+```
+
+### Permission Management
+
+Permissions control access to specific features and resources. Each permission has a unique name that follows a pattern like `view.anime` or `create.user`.
+
+Permissions can be:
+- Assigned directly to users
+- Assigned to roles (which are then assigned to users)
+
+### User Management
+
+The **Users** resource (app/Filament/Resources/Auth/UserResource.php:36) allows administrators to:
+
+- View user profiles and details
+- Assign/revoke roles
+- Grant/revoke direct permissions
+- Issue sanctions or prohibitions
+- View user playlists
+
+Available user actions:
+- Give Role
+- Revoke Role
+- Give Permission
+- Revoke Permission
+- Give Prohibition
+- Give Sanction
+
+## Global Search
+
+The admin panel includes a global search feature powered by Laravel Scout. Search across all resources from the top navigation bar.
+
+## Features
+
+### Database Notifications
+
+The panel supports database notifications for important events and actions.
+
+### Dark Mode
+
+Toggle between light and dark themes using the theme switcher in the navigation.
+
+### Recently Viewed
+
+The panel includes a "Recently" plugin that tracks recently viewed resources for quick access.
+
+### Collapsible Sidebar
+
+The sidebar can be collapsed on desktop for a more focused view.
+
+### SPA Mode
+
+The panel runs in Single Page Application (SPA) mode for improved performance and user experience.
+
+## Resource Actions
+
+Many resources include bulk actions and individual record actions:
+
+### Dump Resource Actions
+
+The Dumps resource (app/Filament/Resources/Admin/DumpResource.php:28) provides actions for:
+
+- Dump Wiki - Create wiki database dump
+- Dump Document - Create document database dump
+- Prune Dump - Remove old dump files
+- Reconcile Dump - Sync dumps with storage
+
+### Role Actions
+
+- Give Permission - Assign permission to role
+- Revoke Permission - Remove permission from role
+
+### Permission Actions
+
+- Give Role - Assign permission to role
+- Revoke Role - Remove permission from role
+
+## Charts and Widgets
+
+The admin panel includes various chart widgets for data visualization:
+
+- Video Chart - Video statistics
+- Series Chart - Series analytics
+- Artist Chart - Artist metrics
+- Anime Chart - Anime statistics
+- Playlist Chart - Playlist data
+- Playlist Track Chart - Track analytics
+- External Profile Chart - Profile metrics
+- User Chart - User statistics
+
+Widgets are built using the FilamentECharts plugin for interactive charts.
+
+## Configuration
+
+The admin panel is configured in `app/Providers/FilamentPanelProvider.php`:
+
+- **Path**: Configurable URL path (default: `/admin`)
+- **Domain**: Optional custom domain
+- **Brand Logo**: Custom logo support with dark mode variant
+- **Max Content Width**: Full-width layout
+- **Colors**: Primary color scheme (Violet)
+- **Navigation Groups**: Organized by NavigationGroup enum
+
+## Best Practices
+
+1. **Use Roles**: Prefer role-based permissions over direct user permissions
+2. **Audit Logs**: Review the Action Logs resource regularly
+3. **Search**: Use global search to quickly find resources
+4. **Recently Viewed**: Leverage the recently viewed feature for frequent tasks
+5. **Bulk Actions**: Use table bulk actions for efficient batch operations
+6. **Filters**: Apply table filters to narrow down records
+7. **Column Manager**: Customize visible columns per your needs

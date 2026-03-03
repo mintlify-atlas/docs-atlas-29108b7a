@@ -1,0 +1,403 @@
+---
+title: 'Videos'
+description: 'Video resource endpoints for managing anime theme videos'
+---
+
+## Overview
+
+The Video resource represents video files for anime themes. Each video contains metadata about resolution, source, encoding properties, and is linked to theme entries.
+
+## List Videos
+
+<ParamField path="GET" type="endpoint">
+  /api/video
+</ParamField>
+
+Retrieve a paginated list of videos.
+
+### Query Parameters
+
+<ParamField query="page[size]" type="integer">
+  Number of results per page (default: 15, max: 100)
+</ParamField>
+
+<ParamField query="page[number]" type="integer">
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relationships to include. Available includes:
+  - `animethemeentries` - Theme entries this video belongs to
+  - `animethemeentries.animetheme` - Anime themes
+  - `animethemeentries.animetheme.anime` - Parent anime
+  - `animethemeentries.animetheme.song` - Associated songs
+  - `audio` - Audio track for this video
+  - `videoscript` - Subtitle/script file
+  - `tracks` - Playlist tracks using this video
+</ParamField>
+
+<ParamField query="filter[basename]" type="string">
+  Filter by video basename
+</ParamField>
+
+<ParamField query="filter[resolution]" type="integer">
+  Filter by resolution (e.g., 720, 1080)
+</ParamField>
+
+<ParamField query="filter[source]" type="string">
+  Filter by source. Values: `WEB`, `RAW`, `BD`, `DVD`, `VHS`, `LD`, `AT`
+</ParamField>
+
+<ParamField query="filter[nc]" type="boolean">
+  Filter by creditless (NC) status. Values: `true`, `false`
+</ParamField>
+
+<ParamField query="filter[subbed]" type="boolean">
+  Filter by subbed status. Values: `true`, `false`
+</ParamField>
+
+<ParamField query="filter[lyrics]" type="boolean">
+  Filter by lyrics status. Values: `true`, `false`
+</ParamField>
+
+<ParamField query="filter[uncen]" type="boolean">
+  Filter by uncensored status. Values: `true`, `false`
+</ParamField>
+
+<ParamField query="filter[overlap]" type="string">
+  Filter by overlap type. Values: `None`, `Transition`, `Over`
+</ParamField>
+
+<ParamField query="fields[video]" type="string">
+  Comma-separated list of fields to return. Available fields:
+  - `video_id`
+  - `basename`
+  - `filename`
+  - `path`
+  - `size`
+  - `mimetype`
+  - `resolution`
+  - `source`
+  - `nc`
+  - `subbed`
+  - `lyrics`
+  - `uncen`
+  - `overlap`
+  - `audio_id`
+  - `link`
+  - `tags`
+  - `priority`
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort by field. Prefix with `-` for descending order.
+  Available: `basename`, `resolution`, `source`, `created_at`, `updated_at`
+</ParamField>
+
+<ParamField query="q" type="string">
+  Full-text search query across video basenames and anime
+</ParamField>
+
+### Response
+
+<ResponseField name="videos" type="array">
+  Array of video objects
+  
+  <ResponseField name="video_id" type="integer">
+    Unique identifier
+  </ResponseField>
+  
+  <ResponseField name="basename" type="string">
+    Video filename without extension
+  </ResponseField>
+  
+  <ResponseField name="filename" type="string">
+    Full filename with extension
+  </ResponseField>
+  
+  <ResponseField name="path" type="string">
+    Full storage path
+  </ResponseField>
+  
+  <ResponseField name="size" type="integer">
+    File size in bytes
+  </ResponseField>
+  
+  <ResponseField name="mimetype" type="string">
+    MIME type (e.g., "video/webm")
+  </ResponseField>
+  
+  <ResponseField name="resolution" type="integer" optional>
+    Video resolution (e.g., 720, 1080)
+  </ResponseField>
+  
+  <ResponseField name="source" type="string" optional>
+    Video source (WEB, RAW, BD, DVD, etc.)
+  </ResponseField>
+  
+  <ResponseField name="nc" type="boolean">
+    Creditless flag
+  </ResponseField>
+  
+  <ResponseField name="subbed" type="boolean">
+    Hardsubbed flag
+  </ResponseField>
+  
+  <ResponseField name="lyrics" type="boolean">
+    On-screen lyrics flag
+  </ResponseField>
+  
+  <ResponseField name="uncen" type="boolean">
+    Uncensored flag
+  </ResponseField>
+  
+  <ResponseField name="overlap" type="string">
+    Overlap type (None, Transition, Over)
+  </ResponseField>
+  
+  <ResponseField name="audio_id" type="integer" optional>
+    Associated audio track ID
+  </ResponseField>
+  
+  <ResponseField name="link" type="string">
+    Direct streaming URL
+  </ResponseField>
+  
+  <ResponseField name="tags" type="string">
+    Concatenated tags (e.g., "NCBD1080")
+  </ResponseField>
+  
+  <ResponseField name="priority" type="integer">
+    Quality priority score
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/video?include=animethemeentries.animetheme.anime,audio&filter[resolution]=1080&page[size]=10"
+```
+
+### Example Response
+
+```json
+{
+  "videos": [
+    {
+      "video_id": 1,
+      "basename": "CowboyBebop-OP1",
+      "filename": "CowboyBebop-OP1.webm",
+      "path": "/videos/CowboyBebop-OP1.webm",
+      "size": 15728640,
+      "mimetype": "video/webm",
+      "resolution": 1080,
+      "source": "BD",
+      "nc": true,
+      "subbed": false,
+      "lyrics": false,
+      "uncen": false,
+      "overlap": "None",
+      "audio_id": 1,
+      "link": "https://v.animethemes.moe/CowboyBebop-OP1.webm",
+      "tags": "NCBD1080",
+      "priority": 10,
+      "created_at": "2024-01-15T12:00:00.000000Z",
+      "updated_at": "2024-01-15T12:00:00.000000Z",
+      "animethemeentries": [
+        {
+          "entry_id": 1,
+          "version": 1,
+          "animetheme": {
+            "theme_id": 1,
+            "type": "OP",
+            "sequence": 1,
+            "anime": {
+              "anime_id": 1,
+              "name": "Cowboy Bebop"
+            }
+          }
+        }
+      ],
+      "audio": {
+        "audio_id": 1,
+        "basename": "CowboyBebop-OP1",
+        "filename": "CowboyBebop-OP1.ogg"
+      }
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/video?page[number]=1",
+    "next": "https://api.animethemes.moe/api/video?page[number]=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 10
+  }
+}
+```
+
+## Show Video
+
+<ParamField path="GET" type="endpoint">
+  /api/video/:basename
+</ParamField>
+
+Retrieve a single video by its basename.
+
+### Path Parameters
+
+<ParamField path="basename" type="string" required>
+  The video basename (filename without extension)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Same includes as list endpoint
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/video/CowboyBebop-OP1?include=animethemeentries.animetheme.anime,audio,videoscript"
+```
+
+### Example Response
+
+```json
+{
+  "video": {
+    "video_id": 1,
+    "basename": "CowboyBebop-OP1",
+    "filename": "CowboyBebop-OP1.webm",
+    "path": "/videos/CowboyBebop-OP1.webm",
+    "size": 15728640,
+    "mimetype": "video/webm",
+    "resolution": 1080,
+    "source": "BD",
+    "nc": true,
+    "subbed": false,
+    "lyrics": false,
+    "uncen": false,
+    "overlap": "None",
+    "link": "https://v.animethemes.moe/CowboyBebop-OP1.webm",
+    "tags": "NCBD1080",
+    "priority": 10,
+    "audio": {
+      "audio_id": 1,
+      "basename": "CowboyBebop-OP1",
+      "link": "https://a.animethemes.moe/CowboyBebop-OP1.ogg"
+    },
+    "videoscript": {
+      "script_id": 1,
+      "path": "/scripts/CowboyBebop-OP1.ass"
+    }
+  }
+}
+```
+
+## Create Video
+
+<ParamField path="POST" type="endpoint">
+  /api/video
+</ParamField>
+
+Create a new video. Requires authentication.
+
+### Request Body
+
+<ParamField body="basename" type="string" required>
+  Video basename (unique)
+</ParamField>
+
+<ParamField body="filename" type="string" required>
+  Full filename with extension
+</ParamField>
+
+<ParamField body="path" type="string" required>
+  Storage path
+</ParamField>
+
+<ParamField body="size" type="integer" required>
+  File size in bytes
+</ParamField>
+
+<ParamField body="mimetype" type="string" required>
+  MIME type
+</ParamField>
+
+<ParamField body="resolution" type="integer" optional>
+  Video resolution
+</ParamField>
+
+<ParamField body="source" type="string" optional>
+  Video source (WEB, RAW, BD, DVD, etc.)
+</ParamField>
+
+<ParamField body="nc" type="boolean" optional>
+  Creditless flag (default: false)
+</ParamField>
+
+<ParamField body="subbed" type="boolean" optional>
+  Hardsubbed flag (default: false)
+</ParamField>
+
+<ParamField body="lyrics" type="boolean" optional>
+  On-screen lyrics flag (default: false)
+</ParamField>
+
+<ParamField body="uncen" type="boolean" optional>
+  Uncensored flag (default: false)
+</ParamField>
+
+<ParamField body="overlap" type="string" optional>
+  Overlap type (None, Transition, Over)
+</ParamField>
+
+<ParamField body="audio_id" type="integer" optional>
+  Associated audio track ID
+</ParamField>
+
+## Update Video
+
+<ParamField path="PUT" type="endpoint">
+  /api/video/:basename
+</ParamField>
+
+Update an existing video. Requires authentication.
+
+### Request Body
+
+Same fields as create endpoint (all optional).
+
+## Delete Video
+
+<ParamField path="DELETE" type="endpoint">
+  /api/video/:basename
+</ParamField>
+
+Soft delete a video. Requires authentication.
+
+## Restore Video
+
+<ParamField path="PATCH" type="endpoint">
+  /restore/video/:basename
+</ParamField>
+
+Restore a soft-deleted video. Requires authentication.
+
+## Force Delete Video
+
+<ParamField path="DELETE" type="endpoint">
+  /forceDelete/video/:basename
+</ParamField>
+
+Permanently delete a video. Requires authentication.

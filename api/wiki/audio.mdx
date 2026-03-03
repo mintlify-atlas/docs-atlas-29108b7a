@@ -1,0 +1,261 @@
+---
+title: 'Audio'
+description: 'Audio resource endpoints for managing audio tracks'
+---
+
+## Overview
+
+The Audio resource represents audio track files extracted from videos. Audio files are typically in OGG or FLAC format and can be associated with multiple video files.
+
+## List Audio
+
+<ParamField path="GET" type="endpoint">
+  /api/audio
+</ParamField>
+
+Retrieve a paginated list of audio tracks.
+
+### Query Parameters
+
+<ParamField query="page[size]" type="integer">
+  Number of results per page (default: 15, max: 100)
+</ParamField>
+
+<ParamField query="page[number]" type="integer">
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relationships to include. Available includes:
+  - `videos` - Videos using this audio track
+</ParamField>
+
+<ParamField query="filter[basename]" type="string">
+  Filter by audio basename
+</ParamField>
+
+<ParamField query="fields[audio]" type="string">
+  Comma-separated list of fields to return. Available fields:
+  - `audio_id`
+  - `basename`
+  - `filename`
+  - `path`
+  - `size`
+  - `mimetype`
+  - `link`
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort by field. Prefix with `-` for descending order.
+  Available: `basename`, `size`, `created_at`, `updated_at`
+</ParamField>
+
+### Response
+
+<ResponseField name="audios" type="array">
+  Array of audio objects
+  
+  <ResponseField name="audio_id" type="integer">
+    Unique identifier
+  </ResponseField>
+  
+  <ResponseField name="basename" type="string">
+    Audio filename without extension
+  </ResponseField>
+  
+  <ResponseField name="filename" type="string">
+    Full filename with extension
+  </ResponseField>
+  
+  <ResponseField name="path" type="string">
+    Full storage path
+  </ResponseField>
+  
+  <ResponseField name="size" type="integer">
+    File size in bytes
+  </ResponseField>
+  
+  <ResponseField name="mimetype" type="string">
+    MIME type (e.g., "audio/ogg", "audio/flac")
+  </ResponseField>
+  
+  <ResponseField name="link" type="string">
+    Direct streaming URL
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/audio?include=videos&page[size]=10"
+```
+
+### Example Response
+
+```json
+{
+  "audios": [
+    {
+      "audio_id": 1,
+      "basename": "CowboyBebop-OP1",
+      "filename": "CowboyBebop-OP1.ogg",
+      "path": "/audio/CowboyBebop-OP1.ogg",
+      "size": 5242880,
+      "mimetype": "audio/ogg",
+      "link": "https://a.animethemes.moe/CowboyBebop-OP1.ogg",
+      "created_at": "2024-01-15T12:00:00.000000Z",
+      "updated_at": "2024-01-15T12:00:00.000000Z",
+      "videos": [
+        {
+          "video_id": 1,
+          "basename": "CowboyBebop-OP1",
+          "resolution": 1080,
+          "source": "BD"
+        },
+        {
+          "video_id": 2,
+          "basename": "CowboyBebop-OP1-NCBD720",
+          "resolution": 720,
+          "source": "BD"
+        }
+      ]
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/audio?page[number]=1",
+    "next": "https://api.animethemes.moe/api/audio?page[number]=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 10
+  }
+}
+```
+
+## Show Audio
+
+<ParamField path="GET" type="endpoint">
+  /api/audio/:basename
+</ParamField>
+
+Retrieve a single audio track by its basename.
+
+### Path Parameters
+
+<ParamField path="basename" type="string" required>
+  The audio basename (filename without extension)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Same includes as list endpoint
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/audio/CowboyBebop-OP1?include=videos"
+```
+
+### Example Response
+
+```json
+{
+  "audio": {
+    "audio_id": 1,
+    "basename": "CowboyBebop-OP1",
+    "filename": "CowboyBebop-OP1.ogg",
+    "path": "/audio/CowboyBebop-OP1.ogg",
+    "size": 5242880,
+    "mimetype": "audio/ogg",
+    "link": "https://a.animethemes.moe/CowboyBebop-OP1.ogg",
+    "created_at": "2024-01-15T12:00:00.000000Z",
+    "updated_at": "2024-01-15T12:00:00.000000Z",
+    "videos": [
+      {
+        "video_id": 1,
+        "basename": "CowboyBebop-OP1",
+        "filename": "CowboyBebop-OP1.webm",
+        "resolution": 1080,
+        "source": "BD",
+        "link": "https://v.animethemes.moe/CowboyBebop-OP1.webm"
+      }
+    ]
+  }
+}
+```
+
+## Create Audio
+
+<ParamField path="POST" type="endpoint">
+  /api/audio
+</ParamField>
+
+Create a new audio track. Requires authentication.
+
+### Request Body
+
+<ParamField body="basename" type="string" required>
+  Audio basename (unique)
+</ParamField>
+
+<ParamField body="filename" type="string" required>
+  Full filename with extension
+</ParamField>
+
+<ParamField body="path" type="string" required>
+  Storage path
+</ParamField>
+
+<ParamField body="size" type="integer" required>
+  File size in bytes
+</ParamField>
+
+<ParamField body="mimetype" type="string" required>
+  MIME type (e.g., "audio/ogg", "audio/flac")
+</ParamField>
+
+## Update Audio
+
+<ParamField path="PUT" type="endpoint">
+  /api/audio/:basename
+</ParamField>
+
+Update an existing audio track. Requires authentication.
+
+### Request Body
+
+Same fields as create endpoint (all optional).
+
+## Delete Audio
+
+<ParamField path="DELETE" type="endpoint">
+  /api/audio/:basename
+</ParamField>
+
+Soft delete an audio track. Requires authentication.
+
+## Restore Audio
+
+<ParamField path="PATCH" type="endpoint">
+  /restore/audio/:basename
+</ParamField>
+
+Restore a soft-deleted audio track. Requires authentication.
+
+## Force Delete Audio
+
+<ParamField path="DELETE" type="endpoint">
+  /forceDelete/audio/:basename
+</ParamField>
+
+Permanently delete an audio track. Requires authentication.

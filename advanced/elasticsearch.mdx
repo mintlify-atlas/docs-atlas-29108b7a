@@ -1,0 +1,520 @@
+---
+title: Elasticsearch Setup
+description: Configure Elasticsearch for search functionality
+---
+
+AnimeThemes Server uses Elasticsearch for powerful search capabilities across anime, artists, themes, and other resources.
+
+## Overview
+
+Elasticsearch provides:
+- Full-text search with custom analyzers
+- Synonym matching for anime titles
+- Fast autocomplete and search-as-you-type
+- Advanced filtering and aggregations
+
+The application uses [elastic/elasticsearch-php](https://github.com/elastic/elasticsearch-php) client and [babenkoivan/elastic-migrations](https://github.com/babenkoivan/elastic-migrations) for index management.
+
+## Prerequisites
+
+- Elasticsearch 7.x or 8.x
+- PHP 8.1+
+- Composer dependencies installed
+
+## Installation
+
+### Option 1: Docker
+
+```bash
+docker run -d \
+  --name elasticsearch \
+  -p 9200:9200 \
+  -p 9300:9300 \
+  -e "discovery.type=single-node" \
+  -e "xpack.security.enabled=false" \
+  docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+```
+
+### Option 2: Docker Compose
+
+```yaml
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+volumes:
+  elasticsearch_data:
+```
+
+### Option 3: System Package
+
+**Ubuntu/Debian:**
+
+```bash
+wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+echo "deb https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
+sudo apt-get update
+sudo apt-get install elasticsearch
+sudo systemctl start elasticsearch
+sudo systemctl enable elasticsearch
+```
+
+**macOS (Homebrew):**
+
+```bash
+brew tap elastic/tap
+brew install elastic/tap/elasticsearch-full
+brew services start elasticsearch-full
+```
+
+## Configuration
+
+### Environment Variables
+
+Configure Elasticsearch connection in `.env`:
+
+```bash
+# Elasticsearch Client
+ELASTIC_CONNECTION=default
+ELASTIC_HOST=http://localhost:9200
+
+# Scout Driver
+SCOUT_DRIVER=elastic
+SCOUT_PREFIX=
+SCOUT_QUEUE=false
+
+# Elastic Scout Driver
+ELASTIC_SCOUT_DRIVER_REFRESH_DOCUMENTS=false
+
+# Elastic Migrations
+ELASTIC_MIGRATIONS_TABLE=elastic_migrations
+ELASTIC_MIGRATIONS_CONNECTION=
+```
+
+### Configuration Files
+
+**`config/elastic.client.php`:**
+
+```php
+return [
+    'default' => env('ELASTIC_CONNECTION', 'default'),
+    'connections' => [
+        'default' => [
+            'hosts' => [
+                env('ELASTIC_HOST', 'localhost:9200'),
+            ],
+        ],
+    ],
+];
+```
+
+**`config/elastic.migrations.php`:**
+
+```php
+return [
+    'storage' => [
+        'default_path' => env('ELASTIC_MIGRATIONS_DEFAULT_PATH', base_path('elastic/migrations')),
+    ],
+    'database' => [
+        'table' => env('ELASTIC_MIGRATIONS_TABLE', 'elastic_migrations'),
+        'connection' => env('ELASTIC_MIGRATIONS_CONNECTION'),
+    ],
+    'prefixes' => [
+        'index' => env('ELASTIC_MIGRATIONS_INDEX_PREFIX', env('SCOUT_PREFIX', '')),
+        'alias' => env('ELASTIC_MIGRATIONS_ALIAS_PREFIX', env('SCOUT_PREFIX', '')),
+    ],
+];
+```
+
+**`config/elastic.scout_driver.php`:**
+
+```php
+return [
+    'refresh_documents' => env('ELASTIC_SCOUT_DRIVER_REFRESH_DOCUMENTS', false),
+];
+```
+
+## Environment Variables Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ELASTIC_CONNECTION` | `default` | Connection name to use |
+| `ELASTIC_HOST` | `http://localhost:9200` | Elasticsearch server URL |
+| `SCOUT_DRIVER` | `null` | Set to `elastic` to enable |
+| `SCOUT_PREFIX` | - | Index prefix (useful for multi-tenancy) |
+| `SCOUT_QUEUE` | `false` | Queue search index updates |
+| `ELASTIC_SCOUT_DRIVER_REFRESH_DOCUMENTS` | `false` | Immediately refresh indices after write operations |
+| `ELASTIC_MIGRATIONS_TABLE` | `elastic_migrations` | Database table to track migrations |
+| `ELASTIC_MIGRATIONS_CONNECTION` | - | Database connection for migration tracking |
+
+## Index Setup
+
+AnimeThemes Server includes migrations for all searchable models.
+
+### Available Indices
+
+Located in `elastic/migrations/`:
+
+- `2020_12_21_225415_create_anime_index.php` - Anime search
+- `2020_12_22_033019_create_artist_index.php` - Artist search
+- `2020_12_22_034505_create_entry_index.php` - Entry search
+- `2020_12_22_034544_create_series_index.php` - Series search
+- `2020_12_22_034549_create_song_index.php` - Song search
+- `2020_12_22_034553_create_anime_synonym_index.php` - Anime synonym search
+- `2020_12_22_034557_create_theme_index.php` - Theme search
+
+### Run Migrations
+
+Create all Elasticsearch indices:
+
+```bash
+php artisan elastic:migrate
+```
+
+This will:
+1. Create indices with proper mappings and analyzers
+2. Track migration status in the database
+3. Set up index aliases for zero-downtime reindexing
+
+### Migration Status
+
+Check which migrations have run:
+
+```bash
+php artisan elastic:migrate:status
+```
+
+### Rollback Migrations
+
+Rollback the last batch:
+
+```bash
+php artisan elastic:migrate:rollback
+```
+
+Rollback all migrations:
+
+```bash
+php artisan elastic:migrate:reset
+```
+
+### Refresh Migrations
+
+Drop all indices and recreate them:
+
+```bash
+php artisan elastic:migrate:refresh
+```
+
+## Index Data
+
+After creating indices, populate them with data:
+
+### Index All Models
+
+```bash
+# Index all searchable models
+php artisan scout:import "App\Models\Wiki\Anime"
+php artisan scout:import "App\Models\Wiki\Artist"
+php artisan scout:import "App\Models\Wiki\Song"
+php artisan scout:import "App\Models\Wiki\Series"
+```
+
+### Index Specific Model
+
+```bash
+php artisan scout:import "App\Models\Wiki\Anime"
+```
+
+### Flush Index
+
+Remove all documents from an index:
+
+```bash
+php artisan scout:flush "App\Models\Wiki\Anime"
+```
+
+## Index Structure
+
+### Anime Index
+
+Example migration from `elastic/migrations/2020_12_21_225415_create_anime_index.php`:
+
+```php
+Index::create('anime', function (Mapping $mapping, Settings $settings) {
+    $this->configureTextAnalyzers($settings);
+    
+    $mapping->long('anime_id');
+    $mapping->date('created_at');
+    $mapping->text('name', [
+        'analyzer' => 'name_search',
+        'fields' => [
+            'keyword' => [
+                'type' => 'keyword',
+            ],
+        ],
+    ]);
+    $mapping->long('season');
+    $mapping->long('media_format');
+    $mapping->text('slug');
+    $mapping->nested('synonyms', [
+        'properties' => [
+            'text' => [
+                'type' => 'text',
+                'analyzer' => 'name_search',
+            ],
+            'type' => ['type' => 'long'],
+        ],
+    ]);
+    $mapping->text('synopsis');
+    $mapping->date('updated_at');
+    $mapping->long('year');
+});
+```
+
+This creates an index with:
+- **Name field** with custom analyzer for better matching
+- **Synonyms** as nested documents for alternative titles
+- **Keyword fields** for exact matching
+- **Metadata** like season, year, media format
+
+### Text Analyzers
+
+Custom analyzers improve search quality. From `App\Concerns\Elastic\ConfiguresTextAnalyzers`:
+
+The analyzers handle:
+- Case normalization
+- ASCII folding (é → e)
+- Stemming
+- Synonym expansion
+
+## Search Operations
+
+### Basic Search
+
+```php
+use App\Models\Wiki\Anime;
+
+// Search anime by name
+$results = Anime::search('steins gate')->get();
+
+// Search with pagination
+$results = Anime::search('cowboy bebop')->paginate(15);
+```
+
+### Advanced Search
+
+```php
+use App\Models\Wiki\Anime;
+
+// Search with filters
+$results = Anime::search('action')
+    ->where('year', 2023)
+    ->where('season', 1)
+    ->get();
+
+// Raw Elasticsearch query
+$results = Anime::search('', function ($client, $query, $options) {
+    $options['body']['query'] = [
+        'bool' => [
+            'must' => [
+                ['match' => ['name' => 'naruto']],
+            ],
+            'filter' => [
+                ['range' => ['year' => ['gte' => 2000]]],
+            ],
+        ],
+    ];
+    return $client->search($options);
+})->get();
+```
+
+### Synonym Search
+
+Anime synonyms are indexed as nested documents:
+
+```php
+// Search will match both main name and synonyms
+$results = Anime::search('Shingeki no Kyojin')->get();
+$results = Anime::search('Attack on Titan')->get();
+// Both return the same anime
+```
+
+## Maintenance
+
+### Reindex Data
+
+When changing index mappings or analyzers:
+
+1. Create a new migration with updated mapping
+2. Run the migration:
+   ```bash
+   php artisan elastic:migrate
+   ```
+3. Reindex the data:
+   ```bash
+   php artisan scout:import "App\Models\Wiki\Anime"
+   ```
+
+### Monitor Index Health
+
+```bash
+# Check cluster health
+curl http://localhost:9200/_cluster/health?pretty
+
+# Check index stats
+curl http://localhost:9200/anime/_stats?pretty
+
+# List all indices
+curl http://localhost:9200/_cat/indices?v
+```
+
+### Optimize Indices
+
+```bash
+# Force merge to optimize
+curl -X POST "http://localhost:9200/anime/_forcemerge?max_num_segments=1"
+
+# Refresh index
+curl -X POST "http://localhost:9200/anime/_refresh"
+```
+
+## Performance Tuning
+
+### Queue Index Updates
+
+For better performance, queue search index updates:
+
+```bash
+# .env
+SCOUT_QUEUE=true
+QUEUE_CONNECTION=redis
+```
+
+Models will be indexed asynchronously via queue workers.
+
+### Bulk Indexing
+
+When importing large datasets, use chunking:
+
+```bash
+# Import in chunks of 500 (default)
+php artisan scout:import "App\Models\Wiki\Anime"
+
+# Custom chunk size
+php artisan scout:import "App\Models\Wiki\Anime" --chunk=1000
+```
+
+### Index Prefixing
+
+Use prefixes for multiple environments sharing one Elasticsearch cluster:
+
+```bash
+# .env
+SCOUT_PREFIX=production_
+```
+
+Indices will be named `production_anime`, `production_artist`, etc.
+
+## Troubleshooting
+
+### Connection refused
+
+```bash
+# Check if Elasticsearch is running
+curl http://localhost:9200
+
+# Check Docker container
+docker ps | grep elasticsearch
+docker logs elasticsearch
+```
+
+### Index not found
+
+```bash
+# List all indices
+curl http://localhost:9200/_cat/indices?v
+
+# Run migrations
+php artisan elastic:migrate
+
+# Reindex data
+php artisan scout:import "App\Models\Wiki\Anime"
+```
+
+### Search returns no results
+
+1. Verify data is indexed:
+   ```bash
+   curl http://localhost:9200/anime/_count
+   ```
+
+2. Check index mapping:
+   ```bash
+   curl http://localhost:9200/anime/_mapping?pretty
+   ```
+
+3. Test query directly:
+   ```bash
+   curl -X POST "http://localhost:9200/anime/_search?pretty" -H 'Content-Type: application/json' -d'
+   {
+     "query": {
+       "match": {
+         "name": "steins gate"
+       }
+     }
+   }'
+   ```
+
+4. Flush and reimport:
+   ```bash
+   php artisan scout:flush "App\Models\Wiki\Anime"
+   php artisan scout:import "App\Models\Wiki\Anime"
+   ```
+
+### Out of memory errors
+
+Increase Elasticsearch heap size:
+
+```bash
+# Docker
+docker run -e "ES_JAVA_OPTS=-Xms1g -Xmx1g" ...
+
+# System service
+# Edit /etc/elasticsearch/jvm.options
+-Xms1g
+-Xmx1g
+```
+
+### Slow queries
+
+1. Enable slow query logging in Elasticsearch
+2. Use index prefixes to isolate environments
+3. Optimize index settings and mappings
+4. Consider index lifecycle management for large datasets
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Search API" icon="magnifying-glass" href="/api/search">
+    Use the search API
+  </Card>
+  <Card title="Environment Variables" icon="gear" href="/advanced/environment">
+    Configure environment variables
+  </Card>
+  <Card title="Feature Flags" icon="flag" href="/advanced/feature-flags">
+    Manage feature availability
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/deployment/docker">
+    Deploy to production
+  </Card>
+</CardGroup>

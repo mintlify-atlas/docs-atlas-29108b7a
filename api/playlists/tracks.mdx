@@ -1,0 +1,325 @@
+---
+title: Playlist Track Management
+description: Managing tracks within playlists including adding, removing, and reordering
+---
+
+## Introduction
+
+Playlist tracks represent individual video entries within a playlist. Each track references a specific anime theme entry and video, and maintains links to the previous and next tracks in the playlist's playback order.
+
+## Track Structure
+
+A playlist track contains:
+
+- **track_id** - Unique identifier for the track
+- **playlist_id** - ID of the parent playlist
+- **entry_id** - Reference to an anime theme entry
+- **video_id** - Reference to a specific video
+- **previous_id** - Link to the previous track (null for first track)
+- **next_id** - Link to the next track (null for last track)
+
+Tracks also have access to hashids for secure, encoded identification.
+
+## Endpoints
+
+### List Tracks
+
+```http
+GET /api/playlist/{playlist}/track
+```
+
+Retrieves all tracks in a playlist. This returns tracks in database order, not playback order.
+
+**Parameters:**
+
+- `{playlist}` - Playlist hashid
+
+**Example:**
+
+```http
+GET /api/playlist/Zk8OvY3e/track?include=video,animethemeentry
+```
+
+**Response Example:**
+
+```json
+{
+  "tracks": [
+    {
+      "id": "Lm4Rv7Qp",
+      "playlist_id": "Zk8OvY3e",
+      "entry_id": 12345,
+      "video_id": 67890,
+      "previous_id": null,
+      "next_id": 98765,
+      "created_at": "2023-01-15T11:00:00.000000Z",
+      "updated_at": "2023-01-15T11:00:00.000000Z"
+    }
+  ]
+}
+```
+
+### Get Track
+
+```http
+GET /api/playlist/{playlist}/track/{track}
+```
+
+Retrieves a specific track from a playlist.
+
+**Parameters:**
+
+- `{playlist}` - Playlist hashid
+- `{track}` - Track hashid
+
+**Example:**
+
+```http
+GET /api/playlist/Zk8OvY3e/track/Lm4Rv7Qp?include=video.audio,animethemeentry.animetheme.anime.images
+```
+
+**Response Example:**
+
+```json
+{
+  "track": {
+    "id": "Lm4Rv7Qp",
+    "playlist_id": "Zk8OvY3e",
+    "entry_id": 12345,
+    "video_id": 67890,
+    "previous_id": null,
+    "next_id": 98765,
+    "video": {
+      "id": 67890,
+      "filename": "JujutsuKaisen-OP1.webm",
+      "path": "2023/Fall/JujutsuKaisen-OP1.webm",
+      "resolution": 1080,
+      "nc": false,
+      "audio": {
+        "id": 450,
+        "filename": "JujutsuKaisen-OP1.ogg",
+        "path": "2023/Fall/JujutsuKaisen-OP1.ogg"
+      }
+    },
+    "animethemeentry": {
+      "id": 12345,
+      "version": 1,
+      "episodes": "1-24",
+      "nsfw": false,
+      "animetheme": {
+        "id": 5432,
+        "type": "OP",
+        "sequence": 1,
+        "anime": {
+          "id": 2100,
+          "name": "Jujutsu Kaisen 2nd Season",
+          "slug": "jujutsu_kaisen_2nd_season",
+          "year": 2023,
+          "season": "Fall"
+        }
+      }
+    }
+  }
+}
+```
+
+### Add Track
+
+```http
+POST /api/playlist/{playlist}/track
+```
+
+Adds a new track to the playlist. Requires authentication and playlist ownership.
+
+**Request Body:**
+
+```json
+{
+  "entry_id": 12345,
+  "video_id": 67890,
+  "previous": "Lm4Rv7Qp"
+}
+```
+
+**Fields:**
+
+- `entry_id` (required) - Anime theme entry ID
+- `video_id` (required) - Video ID
+- `previous` (optional) - Hashid of the track to insert after
+- `next` (optional) - Hashid of the track to insert before
+
+**Positioning Logic:**
+
+- If `next` is provided (and `previous` is not), the track is inserted before that track
+- If `previous` is provided (and `next` is not), the track is inserted after that track
+- If neither is provided, the track is appended to the end of the playlist
+- Cannot specify both `previous` and `next` simultaneously
+
+**Example - Add to End:**
+
+```bash
+curl -X POST https://api.animethemes.moe/api/playlist/Zk8OvY3e/track \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "entry_id": 12345,
+    "video_id": 67890
+  }'
+```
+
+**Example - Insert After Specific Track:**
+
+```bash
+curl -X POST https://api.animethemes.moe/api/playlist/Zk8OvY3e/track \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "entry_id": 54321,
+    "video_id": 98765,
+    "previous": "Lm4Rv7Qp"
+  }'
+```
+
+### Update Track
+
+```http
+PUT /api/playlist/{playlist}/track/{track}
+PATCH /api/playlist/{playlist}/track/{track}
+```
+
+Updates a track's attributes or reorders it within the playlist. Requires authentication and playlist ownership.
+
+**Request Body:**
+
+```json
+{
+  "entry_id": 54321,
+  "video_id": 98765,
+  "previous": "Xp9Qm2Vk"
+}
+```
+
+**Fields:**
+
+- `entry_id` (optional) - Update the anime theme entry reference
+- `video_id` (optional) - Update the video reference
+- `previous` (optional) - Move track after this track
+- `next` (optional) - Move track before this track
+
+**Example - Reorder Track:**
+
+```bash
+curl -X PATCH https://api.animethemes.moe/api/playlist/Zk8OvY3e/track/Lm4Rv7Qp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "previous": "Xp9Qm2Vk"
+  }'
+```
+
+This moves the track to immediately after the track with hashid `Xp9Qm2Vk`.
+
+**Example - Change Video:**
+
+```bash
+curl -X PATCH https://api.animethemes.moe/api/playlist/Zk8OvY3e/track/Lm4Rv7Qp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "video_id": 11111
+  }'
+```
+
+### Delete Track
+
+```http
+DELETE /api/playlist/{playlist}/track/{track}
+```
+
+Removes a track from the playlist. The linked list structure is automatically maintained - the previous and next tracks are linked together. Requires authentication and playlist ownership.
+
+**Example:**
+
+```bash
+curl -X DELETE https://api.animethemes.moe/api/playlist/Zk8OvY3e/track/Lm4Rv7Qp \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "message": "Track deleted successfully"
+}
+```
+
+## Track Navigation
+
+### Forward from Track
+
+```http
+GET /api/playlist/{playlist}/track/{track}/forward
+```
+
+Retrieves all tracks that follow the specified track in the playlist order (descendants in the linked list).
+
+**Example:**
+
+```http
+GET /api/playlist/Zk8OvY3e/track/Lm4Rv7Qp/forward?include=video,animethemeentry
+```
+
+### Backward from Track
+
+```http
+GET /api/playlist/{playlist}/track/{track}/backward
+```
+
+Retrieves all tracks that precede the specified track in the playlist order (ancestors in the linked list).
+
+**Example:**
+
+```http
+GET /api/playlist/Zk8OvY3e/track/Lm4Rv7Qp/backward?include=video,animethemeentry
+```
+
+## Including Related Data
+
+Track endpoints support including related resources:
+
+- `video` - The video resource
+- `video.audio` - The audio track associated with the video
+- `animethemeentry` - The anime theme entry
+- `animethemeentry.animetheme` - The anime theme
+- `animethemeentry.animetheme.anime` - The anime
+- `animethemeentry.animetheme.anime.images` - Anime cover images
+- `animethemeentry.animetheme.song` - The song
+- `animethemeentry.animetheme.song.artists` - Song artists
+- `playlist` - The parent playlist
+- `previous` - The previous track in order
+- `next` - The next track in order
+
+**Example with Full Context:**
+
+```http
+GET /api/playlist/Zk8OvY3e/track/Lm4Rv7Qp?include=video.audio,animethemeentry.animetheme.anime.images,animethemeentry.animetheme.song.artists,previous,next
+```
+
+## Authentication & Authorization
+
+All track modification endpoints (POST, PUT/PATCH, DELETE) require:
+
+- Valid authentication token
+- Ownership of the parent playlist
+- `AllowPlaylistManagement` feature enabled
+- Playlist must not exceed track limit (checked for POST operations)
+
+## Limits
+
+- Maximum tracks per playlist is enforced by the `PlaylistExceedsTrackLimit` middleware
+- Track operations are locked at the playlist level to prevent race conditions during reordering
+
+## Related Resources
+
+- [Playlist Overview](/api/playlists/overview) - Understanding playlist structure
+- [Playlist Management](/api/playlists/management) - Creating and managing playlists

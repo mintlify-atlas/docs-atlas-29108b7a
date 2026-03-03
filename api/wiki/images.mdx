@@ -1,0 +1,255 @@
+---
+title: 'Images'
+description: 'Image resource endpoints for managing cover images and artwork'
+---
+
+## Overview
+
+The Image resource represents cover images, artwork, and other visual assets. Images can be associated with anime, artists, studios, and playlists with different facets (Cover, Small Cover, Grill).
+
+## List Images
+
+<ParamField path="GET" type="endpoint">
+  /api/image
+</ParamField>
+
+Retrieve a paginated list of images.
+
+### Query Parameters
+
+<ParamField query="page[size]" type="integer">
+  Number of results per page (default: 15, max: 100)
+</ParamField>
+
+<ParamField query="page[number]" type="integer">
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relationships to include. Available includes:
+  - `anime` - Anime using this image
+  - `artists` - Artists using this image
+  - `studios` - Studios using this image
+  - `playlists` - Playlists using this image
+</ParamField>
+
+<ParamField query="filter[facet]" type="string">
+  Filter by image facet. Values: `Cover`, `Small Cover`, `Grill`
+</ParamField>
+
+<ParamField query="filter[path]" type="string">
+  Filter by image path
+</ParamField>
+
+<ParamField query="fields[image]" type="string">
+  Comma-separated list of fields to return. Available fields:
+  - `image_id`
+  - `path`
+  - `facet`
+  - `link`
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort by field. Prefix with `-` for descending order.
+  Available: `facet`, `created_at`, `updated_at`
+</ParamField>
+
+### Response
+
+<ResponseField name="images" type="array">
+  Array of image objects
+  
+  <ResponseField name="image_id" type="integer">
+    Unique identifier
+  </ResponseField>
+  
+  <ResponseField name="path" type="string">
+    Storage path relative to image disk
+  </ResponseField>
+  
+  <ResponseField name="facet" type="string">
+    Image type (Cover, Small Cover, Grill)
+  </ResponseField>
+  
+  <ResponseField name="link" type="string">
+    Direct URL to the image
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/image?include=anime,artists&filter[facet]=Cover&page[size]=10"
+```
+
+### Example Response
+
+```json
+{
+  "images": [
+    {
+      "image_id": 1,
+      "path": "anime/cowboy_bebop_cover.jpg",
+      "facet": "Cover",
+      "link": "https://animethemes.moe/storage/images/anime/cowboy_bebop_cover.jpg",
+      "created_at": "2024-01-15T12:00:00.000000Z",
+      "updated_at": "2024-01-15T12:00:00.000000Z",
+      "anime": [
+        {
+          "anime_id": 1,
+          "name": "Cowboy Bebop",
+          "slug": "cowboy_bebop"
+        }
+      ],
+      "artists": []
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/image?page[number]=1",
+    "next": "https://api.animethemes.moe/api/image?page[number]=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 10
+  }
+}
+```
+
+## Show Image
+
+<ParamField path="GET" type="endpoint">
+  /api/image/:id
+</ParamField>
+
+Retrieve a single image by its ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The image ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Same includes as list endpoint
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/image/1?include=anime,artists,studios"
+```
+
+### Example Response
+
+```json
+{
+  "image": {
+    "image_id": 1,
+    "path": "anime/cowboy_bebop_cover.jpg",
+    "facet": "Cover",
+    "link": "https://animethemes.moe/storage/images/anime/cowboy_bebop_cover.jpg",
+    "created_at": "2024-01-15T12:00:00.000000Z",
+    "updated_at": "2024-01-15T12:00:00.000000Z",
+    "anime": [
+      {
+        "anime_id": 1,
+        "name": "Cowboy Bebop",
+        "slug": "cowboy_bebop",
+        "year": 1998
+      }
+    ],
+    "artists": [],
+    "studios": [
+      {
+        "studio_id": 1,
+        "name": "Sunrise",
+        "slug": "sunrise"
+      }
+    ]
+  }
+}
+```
+
+## Create Image
+
+<ParamField path="POST" type="endpoint">
+  /api/image
+</ParamField>
+
+Create a new image. Requires authentication.
+
+### Request Body
+
+<ParamField body="path" type="string" required>
+  Storage path for the image
+</ParamField>
+
+<ParamField body="facet" type="string" required>
+  Image facet/type (Cover, Small Cover, Grill)
+</ParamField>
+
+<Note>
+  The actual image file must be uploaded separately to the storage system.
+</Note>
+
+## Update Image
+
+<ParamField path="PUT" type="endpoint">
+  /api/image/:id
+</ParamField>
+
+Update an existing image. Requires authentication.
+
+### Request Body
+
+Same fields as create endpoint (all optional).
+
+## Delete Image
+
+<ParamField path="DELETE" type="endpoint">
+  /api/image/:id
+</ParamField>
+
+Soft delete an image. Requires authentication.
+
+## Restore Image
+
+<ParamField path="PATCH" type="endpoint">
+  /restore/image/:id
+</ParamField>
+
+Restore a soft-deleted image. Requires authentication.
+
+## Force Delete Image
+
+<ParamField path="DELETE" type="endpoint">
+  /forceDelete/image/:id
+</ParamField>
+
+Permanently delete an image. Requires authentication.
+
+## Image Facets
+
+Images can have different facets that determine their usage:
+
+<ResponseField name="Cover" type="facet">
+  Standard cover image (typically 640x640 or similar)
+</ResponseField>
+
+<ResponseField name="Small Cover" type="facet">
+  Thumbnail-sized cover image (typically 256x256 or similar)
+</ResponseField>
+
+<ResponseField name="Grill" type="facet">
+  Character artwork/promotional images
+</ResponseField>

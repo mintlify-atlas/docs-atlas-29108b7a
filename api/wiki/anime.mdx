@@ -1,0 +1,334 @@
+---
+title: 'Anime'
+description: 'Anime resource endpoints for managing anime entries'
+---
+
+## Overview
+
+The Anime resource represents individual anime titles in the database. Each anime includes metadata such as name, season, year, media format, and synopsis.
+
+## List Anime
+
+<ParamField path="GET" type="endpoint">
+  /api/anime
+</ParamField>
+
+Retrieve a paginated list of anime.
+
+### Query Parameters
+
+<ParamField query="page[size]" type="integer">
+  Number of results per page (default: 15, max: 100)
+</ParamField>
+
+<ParamField query="page[number]" type="integer">
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relationships to include. Available includes:
+  - `animethemes` - Anime themes (opening/ending songs)
+  - `animethemes.song` - Songs for each theme
+  - `animethemes.song.artists` - Artists for each song
+  - `animethemes.animethemeentries` - Theme entries
+  - `animethemes.animethemeentries.videos` - Videos for each entry
+  - `images` - Associated images
+  - `resources` - External resources (MAL, AniList, etc.)
+  - `series` - Series this anime belongs to
+  - `studios` - Production studios
+  - `synonyms` - Alternative titles
+</ParamField>
+
+<ParamField query="filter[name]" type="string">
+  Filter by anime name
+</ParamField>
+
+<ParamField query="filter[year]" type="integer">
+  Filter by release year
+</ParamField>
+
+<ParamField query="filter[season]" type="string">
+  Filter by season. Values: `Winter`, `Spring`, `Summer`, `Fall`
+</ParamField>
+
+<ParamField query="filter[media_format]" type="string">
+  Filter by media format. Values: `TV`, `Movie`, `OVA`, `ONA`, `Special`
+</ParamField>
+
+<ParamField query="fields[anime]" type="string">
+  Comma-separated list of fields to return. Available fields:
+  - `anime_id`
+  - `name`
+  - `slug`
+  - `year`
+  - `season`
+  - `media_format`
+  - `synopsis`
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort by field. Prefix with `-` for descending order.
+  Available: `name`, `year`, `season`, `created_at`, `updated_at`
+</ParamField>
+
+<ParamField query="q" type="string">
+  Full-text search query across anime names and synonyms
+</ParamField>
+
+### Response
+
+<ResponseField name="anime" type="array">
+  Array of anime objects
+  
+  <ResponseField name="anime_id" type="integer">
+    Unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Primary anime title
+  </ResponseField>
+  
+  <ResponseField name="slug" type="string">
+    URL-friendly identifier
+  </ResponseField>
+  
+  <ResponseField name="year" type="integer" optional>
+    Release year
+  </ResponseField>
+  
+  <ResponseField name="season" type="string" optional>
+    Release season (Winter, Spring, Summer, Fall)
+  </ResponseField>
+  
+  <ResponseField name="media_format" type="string" optional>
+    Media type (TV, Movie, OVA, ONA, Special)
+  </ResponseField>
+  
+  <ResponseField name="synopsis" type="string" optional>
+    Anime description
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="links" type="object">
+  Pagination links
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata
+</ResponseField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/anime?include=animethemes.song,images&filter[year]=2024&page[size]=10"
+```
+
+### Example Response
+
+```json
+{
+  "anime": [
+    {
+      "anime_id": 1,
+      "name": "Cowboy Bebop",
+      "slug": "cowboy_bebop",
+      "year": 1998,
+      "season": "Spring",
+      "media_format": "TV",
+      "synopsis": "In the year 2071, humanity has colonized several of the planets and moons of the solar system...",
+      "created_at": "2024-01-15T12:00:00.000000Z",
+      "updated_at": "2024-01-15T12:00:00.000000Z",
+      "animethemes": [
+        {
+          "theme_id": 1,
+          "type": "OP",
+          "sequence": 1,
+          "slug": "OP1",
+          "song": {
+            "song_id": 1,
+            "title": "Tank!",
+            "title_native": null
+          }
+        }
+      ],
+      "images": [
+        {
+          "image_id": 1,
+          "facet": "Cover",
+          "link": "https://animethemes.moe/storage/images/cowboy_bebop_cover.jpg"
+        }
+      ]
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/anime?page[number]=1",
+    "last": "https://api.animethemes.moe/api/anime?page[number]=50",
+    "prev": null,
+    "next": "https://api.animethemes.moe/api/anime?page[number]=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "from": 1,
+    "path": "https://api.animethemes.moe/api/anime",
+    "per_page": 10,
+    "to": 10
+  }
+}
+```
+
+## Show Anime
+
+<ParamField path="GET" type="endpoint">
+  /api/anime/:slug
+</ParamField>
+
+Retrieve a single anime by its slug.
+
+### Path Parameters
+
+<ParamField path="slug" type="string" required>
+  The anime slug (URL-friendly identifier)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Same includes as list endpoint
+</ParamField>
+
+<ParamField query="fields[anime]" type="string">
+  Comma-separated list of fields to return
+</ParamField>
+
+### Response
+
+Returns a single anime object with the same structure as the list endpoint.
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/anime/cowboy_bebop?include=animethemes.song.artists,studios,series"
+```
+
+### Example Response
+
+```json
+{
+  "anime": {
+    "anime_id": 1,
+    "name": "Cowboy Bebop",
+    "slug": "cowboy_bebop",
+    "year": 1998,
+    "season": "Spring",
+    "media_format": "TV",
+    "synopsis": "In the year 2071, humanity has colonized several of the planets and moons of the solar system...",
+    "created_at": "2024-01-15T12:00:00.000000Z",
+    "updated_at": "2024-01-15T12:00:00.000000Z",
+    "animethemes": [
+      {
+        "theme_id": 1,
+        "type": "OP",
+        "sequence": 1,
+        "slug": "OP1",
+        "song": {
+          "song_id": 1,
+          "title": "Tank!",
+          "title_native": null,
+          "artists": [
+            {
+              "artist_id": 1,
+              "name": "The Seatbelts",
+              "slug": "the_seatbelts"
+            }
+          ]
+        }
+      }
+    ],
+    "studios": [
+      {
+        "studio_id": 1,
+        "name": "Sunrise",
+        "slug": "sunrise"
+      }
+    ]
+  }
+}
+```
+
+## Create Anime
+
+<ParamField path="POST" type="endpoint">
+  /api/anime
+</ParamField>
+
+Create a new anime entry. Requires authentication.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Anime title
+</ParamField>
+
+<ParamField body="slug" type="string" required>
+  URL-friendly identifier (unique)
+</ParamField>
+
+<ParamField body="year" type="integer" optional>
+  Release year
+</ParamField>
+
+<ParamField body="season" type="string" optional>
+  Release season (Winter, Spring, Summer, Fall)
+</ParamField>
+
+<ParamField body="media_format" type="string" optional>
+  Media format (TV, Movie, OVA, ONA, Special)
+</ParamField>
+
+<ParamField body="synopsis" type="string" optional>
+  Anime description
+</ParamField>
+
+## Update Anime
+
+<ParamField path="PUT" type="endpoint">
+  /api/anime/:slug
+</ParamField>
+
+Update an existing anime. Requires authentication.
+
+### Request Body
+
+Same fields as create endpoint (all optional).
+
+## Delete Anime
+
+<ParamField path="DELETE" type="endpoint">
+  /api/anime/:slug
+</ParamField>
+
+Soft delete an anime. Requires authentication.
+
+## Restore Anime
+
+<ParamField path="PATCH" type="endpoint">
+  /restore/anime/:slug
+</ParamField>
+
+Restore a soft-deleted anime. Requires authentication.
+
+## Force Delete Anime
+
+<ParamField path="DELETE" type="endpoint">
+  /forceDelete/anime/:slug
+</ParamField>
+
+Permanently delete an anime. Requires authentication.

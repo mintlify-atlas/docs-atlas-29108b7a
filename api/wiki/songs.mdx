@@ -1,0 +1,266 @@
+---
+title: 'Songs'
+description: 'Song resource endpoints for managing music tracks'
+---
+
+## Overview
+
+The Song resource represents individual songs used in anime themes. Each song can be associated with multiple anime themes and artists through performances.
+
+## List Songs
+
+<ParamField path="GET" type="endpoint">
+  /api/song
+</ParamField>
+
+Retrieve a paginated list of songs.
+
+### Query Parameters
+
+<ParamField query="page[size]" type="integer">
+  Number of results per page (default: 15, max: 100)
+</ParamField>
+
+<ParamField query="page[number]" type="integer">
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relationships to include. Available includes:
+  - `artists` - Associated artists (deprecated, use performances)
+  - `performances` - Song performances
+  - `performances.artist` - Artists from performances
+  - `animethemes` - Anime themes using this song
+  - `animethemes.anime` - Anime for each theme
+  - `animethemes.animethemeentries` - Theme entries
+  - `animethemes.animethemeentries.videos` - Videos
+  - `resources` - External resources (Spotify, YouTube, etc.)
+</ParamField>
+
+<ParamField query="filter[title]" type="string">
+  Filter by song title
+</ParamField>
+
+<ParamField query="fields[song]" type="string">
+  Comma-separated list of fields to return. Available fields:
+  - `song_id`
+  - `title`
+  - `title_native`
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort by field. Prefix with `-` for descending order.
+  Available: `title`, `created_at`, `updated_at`
+</ParamField>
+
+<ParamField query="q" type="string">
+  Full-text search query across song titles
+</ParamField>
+
+### Response
+
+<ResponseField name="songs" type="array">
+  Array of song objects
+  
+  <ResponseField name="song_id" type="integer">
+    Unique identifier
+  </ResponseField>
+  
+  <ResponseField name="title" type="string" optional>
+    Song title (romanized or English)
+  </ResponseField>
+  
+  <ResponseField name="title_native" type="string" optional>
+    Song title in native language
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    ISO 8601 timestamp
+  </ResponseField>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/song?include=performances.artist,animethemes.anime&page[size]=10"
+```
+
+### Example Response
+
+```json
+{
+  "songs": [
+    {
+      "song_id": 1,
+      "title": "Tank!",
+      "title_native": null,
+      "created_at": "2024-01-15T12:00:00.000000Z",
+      "updated_at": "2024-01-15T12:00:00.000000Z",
+      "performances": [
+        {
+          "performance_id": 1,
+          "song_id": 1,
+          "as": "Artist",
+          "artist": {
+            "artist_id": 1,
+            "name": "The Seatbelts",
+            "slug": "the_seatbelts"
+          }
+        }
+      ],
+      "animethemes": [
+        {
+          "theme_id": 1,
+          "type": "OP",
+          "sequence": 1,
+          "slug": "OP1",
+          "anime": {
+            "anime_id": 1,
+            "name": "Cowboy Bebop",
+            "slug": "cowboy_bebop"
+          }
+        }
+      ]
+    }
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/song?page[number]=1",
+    "next": "https://api.animethemes.moe/api/song?page[number]=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 10
+  }
+}
+```
+
+## Show Song
+
+<ParamField path="GET" type="endpoint">
+  /api/song/:id
+</ParamField>
+
+Retrieve a single song by its ID.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The song ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Same includes as list endpoint
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/song/1?include=performances.artist,animethemes.anime,resources"
+```
+
+### Example Response
+
+```json
+{
+  "song": {
+    "song_id": 1,
+    "title": "Tank!",
+    "title_native": null,
+    "created_at": "2024-01-15T12:00:00.000000Z",
+    "updated_at": "2024-01-15T12:00:00.000000Z",
+    "performances": [
+      {
+        "performance_id": 1,
+        "as": "Artist",
+        "artist": {
+          "artist_id": 1,
+          "name": "The Seatbelts"
+        }
+      }
+    ],
+    "animethemes": [
+      {
+        "theme_id": 1,
+        "type": "OP",
+        "sequence": 1,
+        "anime": {
+          "anime_id": 1,
+          "name": "Cowboy Bebop"
+        }
+      }
+    ],
+    "resources": [
+      {
+        "resource_id": 1,
+        "external_id": "3CTAyBp4M8M",
+        "site": "YouTube",
+        "link": "https://www.youtube.com/watch?v=3CTAyBp4M8M"
+      }
+    ]
+  }
+}
+```
+
+## Create Song
+
+<ParamField path="POST" type="endpoint">
+  /api/song
+</ParamField>
+
+Create a new song. Requires authentication.
+
+### Request Body
+
+<ParamField body="title" type="string" optional>
+  Song title (romanized or English)
+</ParamField>
+
+<ParamField body="title_native" type="string" optional>
+  Song title in native language
+</ParamField>
+
+<Note>
+  At least one of `title` or `title_native` should be provided.
+</Note>
+
+## Update Song
+
+<ParamField path="PUT" type="endpoint">
+  /api/song/:id
+</ParamField>
+
+Update an existing song. Requires authentication.
+
+### Request Body
+
+Same fields as create endpoint (all optional).
+
+## Delete Song
+
+<ParamField path="DELETE" type="endpoint">
+  /api/song/:id
+</ParamField>
+
+Soft delete a song. Requires authentication.
+
+## Restore Song
+
+<ParamField path="PATCH" type="endpoint">
+  /restore/song/:id
+</ParamField>
+
+Restore a soft-deleted song. Requires authentication.
+
+## Force Delete Song
+
+<ParamField path="DELETE" type="endpoint">
+  /forceDelete/song/:id
+</ParamField>
+
+Permanently delete a song. Requires authentication.

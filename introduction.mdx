@@ -1,0 +1,133 @@
+---
+title: Introduction
+description: A comprehensive API and resource management system for anime opening and ending themes
+---
+
+<img
+  className="block dark:hidden"
+  src="/images/hero-light.png"
+  alt="AnimeThemes Hero Light"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.png"
+  alt="AnimeThemes Hero Dark"
+/>
+
+## Welcome to AnimeThemes Server
+
+AnimeThemes Server is a Laravel-powered API that provides direct links to high quality WebMs of anime opening and ending themes. The server manages a comprehensive database of anime, themes, videos, audio files, artists, and songs, making it easy for developers to build applications that showcase anime music.
+
+This documentation covers both the REST and GraphQL APIs, as well as setup and configuration for running your own instance.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="RESTful API" icon="code" iconType="duotone">
+    Full CRUD operations for anime, themes, videos, audio, artists, and more with advanced filtering and pagination
+  </Card>
+  <Card title="GraphQL API" icon="diagram-project" iconType="duotone">
+    Flexible queries with nested relationships, custom filtering, sorting, and efficient data fetching
+  </Card>
+  <Card title="Media streaming" icon="play" iconType="duotone">
+    Stream anime theme videos and audio directly with support for multiple storage backends and streaming methods
+  </Card>
+  <Card title="User playlists" icon="list-music" iconType="duotone">
+    Create and manage custom playlists with up to 1,000 tracks, with forward and backward navigation
+  </Card>
+  <Card title="Advanced search" icon="magnifying-glass" iconType="duotone">
+    Elasticsearch integration for powerful full-text search across anime, artists, songs, and more
+  </Card>
+  <Card title="Admin panel" icon="shield" iconType="duotone">
+    Filament-powered administration interface for managing resources, users, and permissions
+  </Card>
+  <Card title="External integrations" icon="link" iconType="duotone">
+    Connect with MyAnimeList and AniList for syncing user profiles and anime metadata
+  </Card>
+  <Card title="Database dumps" icon="database" iconType="duotone">
+    Automated database dumps for backup and data analysis
+  </Card>
+</CardGroup>
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Make your first API call in under 5 minutes
+  </Card>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Set up your own AnimeThemes Server instance
+  </Card>
+  <Card
+    title="REST API"
+    icon="terminal"
+    href="/api/introduction"
+  >
+    Explore the RESTful API endpoints
+  </Card>
+  <Card
+    title="GraphQL API"
+    icon="diagram-project"
+    href="/graphql/introduction"
+  >
+    Learn about GraphQL queries and schema
+  </Card>
+</CardGroup>
+
+## Resources and support
+
+<CardGroup cols={2}>
+  <Card
+    title="GitHub Repository"
+    icon="github"
+    href="https://github.com/AnimeThemes/animethemes-server"
+  >
+    View the source code and contribute
+  </Card>
+  <Card
+    title="Discord Community"
+    icon="discord"
+    href="https://discordapp.com/invite/m9zbVyQ"
+  >
+    Join the community for help and discussion
+  </Card>
+  <Card
+    title="AnimeThemes.moe"
+    icon="globe"
+    href="https://animethemes.moe/"
+  >
+    Visit the production site
+  </Card>
+  <Card
+    title="r/AnimeThemes"
+    icon="reddit"
+    href="https://reddit.com/r/AnimeThemes"
+  >
+    Join the subreddit community
+  </Card>
+</CardGroup>
+
+## Technology stack
+
+AnimeThemes Server is built with modern technologies:
+
+- **Laravel 12** - PHP framework for web artisans
+- **PHP 8.5** - Latest PHP version with modern features
+- **MySQL 8+** - Relational database for structured data
+- **Elasticsearch** - Advanced search capabilities (optional)
+- **Filament** - Admin panel framework
+- **GraphQL** - Flexible API query language
+- **Laravel Sanctum** - API authentication
+- **Spatie Permission** - Role-based access control
+
+<Note>
+  The AnimeThemes Server API is freely available at `https://api.animethemes.moe`. You can start using it immediately without authentication for most read operations.
+</Note>

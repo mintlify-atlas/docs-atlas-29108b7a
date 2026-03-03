@@ -1,0 +1,192 @@
+---
+title: Pagination
+description: Learn how to paginate API responses
+---
+
+The AnimeThemes API supports two pagination strategies: offset-based pagination and limit-based pagination.
+
+## Pagination Strategies
+
+### Offset Pagination (Default)
+
+Offset pagination uses page numbers and page sizes. This is the default pagination strategy for collection endpoints.
+
+#### Parameters
+
+- `page[size]` - Number of items per page (default: 15, max: 100)
+- `page[number]` - Page number to retrieve (starts at 1)
+
+#### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/anime?page[size]=20&page[number]=2"
+```
+
+#### Example Response
+
+```json
+{
+  "anime": [
+    {
+      "id": 21,
+      "name": "One Piece",
+      "slug": "one_piece",
+      "year": 1999
+    }
+    // ... 19 more items
+  ],
+  "links": {
+    "first": "https://api.animethemes.moe/api/anime?page[size]=20&page[number]=1",
+    "last": null,
+    "prev": "https://api.animethemes.moe/api/anime?page[size]=20&page[number]=1",
+    "next": "https://api.animethemes.moe/api/anime?page[size]=20&page[number]=3"
+  }
+}
+```
+
+### Limit Pagination
+
+Limit pagination allows you to specify a maximum number of results without explicit page numbers. This is useful for "load more" functionality.
+
+#### Parameters
+
+- `page[limit]` - Maximum number of items to return (default: 15, max: 100)
+
+#### Example Request
+
+```bash
+curl "https://api.animethemes.moe/api/anime?page[limit]=50"
+```
+
+#### Example Response
+
+```json
+{
+  "anime": [
+    {
+      "id": 1,
+      "name": "Cowboy Bebop",
+      "slug": "cowboy_bebop",
+      "year": 1998
+    }
+    // ... up to 49 more items
+  ]
+}
+```
+
+Note: Limit pagination returns a simple collection without pagination links.
+
+## Pagination Constraints
+
+The API enforces the following constraints on pagination parameters:
+
+- **Default page size**: 15 items
+- **Maximum page size**: 100 items
+- **Minimum page size**: 1 item
+
+If you request a page size outside the valid range, the API will use the default value of 15.
+
+### Implementation Details
+
+From `app/Http/Api/Criteria/Paging/Criteria.php:14-16`:
+
+```php
+final public const MAX_RESULTS = 100;
+final public const DEFAULT_SIZE = 15;
+```
+
+## Pagination Metadata
+
+Offset-paginated responses include a `links` object with navigation URLs:
+
+```json
+{
+  "links": {
+    "first": "URL to first page",
+    "last": "URL to last page (null for simple pagination)",
+    "prev": "URL to previous page (null if on first page)",
+    "next": "URL to next page (null if on last page)"
+  }
+}
+```
+
+The API uses Laravel's simple pagination, which means:
+- The `last` link is always `null` because the total page count is not calculated
+- This improves performance for large datasets
+- The `next` link will be `null` when you've reached the last page
+
+## Combining with Other Parameters
+
+Pagination can be combined with filtering, sorting, and field selection:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?page[size]=25&page[number]=1&filter[year]=2020&sort=-name&include=animethemes"
+```
+
+This request:
+- Returns 25 items per page
+- Gets the first page
+- Filters anime from 2020
+- Sorts by name in descending order
+- Includes related animethemes
+
+## Best Practices
+
+### Choose the Right Page Size
+
+Balance between:
+- **Smaller page sizes** (10-25) - Faster responses, more requests
+- **Larger page sizes** (50-100) - Fewer requests, slower responses
+
+### Use Limit for Simple Lists
+
+If you only need the first N results without pagination:
+
+```bash
+curl "https://api.animethemes.moe/api/anime?page[limit]=10&sort=-year"
+```
+
+### Preserve Query Parameters
+
+When navigating between pages, use the URLs provided in the `links` object. These URLs preserve all query parameters including filters, sorts, and includes.
+
+## Examples
+
+### Get First Page of Anime (Default)
+
+```bash
+curl https://api.animethemes.moe/api/anime
+```
+
+Returns 15 anime with pagination links.
+
+### Get Specific Page with Custom Size
+
+```bash
+curl "https://api.animethemes.moe/api/anime?page[size]=50&page[number]=3"
+```
+
+Returns items 101-150.
+
+### Get Top 100 Most Recent Anime
+
+```bash
+curl "https://api.animethemes.moe/api/anime?page[limit]=100&sort=-year"
+```
+
+Returns up to 100 anime sorted by year (newest first).
+
+### Paginate Through Artists
+
+```bash
+# Page 1
+curl "https://api.animethemes.moe/api/artist?page[size]=30&page[number]=1"
+
+# Page 2 (use next link from response)
+curl "https://api.animethemes.moe/api/artist?page[size]=30&page[number]=2"
+```
+
+## Related Topics
+
+- [Filtering](/api/filtering) - Filter results before pagination
+- [Rate Limits](/api/rate-limits) - Understand request limits

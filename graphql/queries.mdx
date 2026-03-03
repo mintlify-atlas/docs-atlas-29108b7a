@@ -1,0 +1,335 @@
+---
+title: Writing GraphQL Queries
+description: Learn how to write GraphQL queries for the AnimeThemes API
+---
+
+GraphQL queries allow you to request exactly the data you need. The AnimeThemes API supports both singular queries (fetching one resource) and pagination queries (fetching multiple resources).
+
+## Query Types
+
+### Singular Queries
+
+Singular queries fetch a single resource by a unique identifier like `id` or `slug`.
+
+**Available Singular Queries:**
+- `anime` - Fetch a single anime
+- `artist` - Fetch a single artist
+- `series` - Fetch a single series
+- `studio` - Fetch a single studio
+- `video` - Fetch a single video
+- `playlist` - Fetch a single playlist
+- `playlistTrack` - Fetch a single playlist track
+- `page` - Fetch a single documentation page
+
+### Pagination Queries
+
+Pagination queries fetch multiple resources with filtering, sorting, and pagination support.
+
+**Available Pagination Queries:**
+- `animePagination` - List anime resources
+- `artistPagination` - List artist resources
+- `studioPagination` - List studio resources
+- `videoPagination` - List video resources
+- And many more...
+
+## Field Selection
+
+One of GraphQL's key features is the ability to request only the fields you need.
+
+### Basic Field Selection
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    id
+    name
+    slug
+  }
+}
+```
+
+### All Available Fields
+
+Request all available fields for an anime:
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    id
+    name
+    slug
+    year
+    season
+    media_format
+    synopsis
+    created_at
+    updated_at
+  }
+}
+```
+
+## Nested Resource Queries
+
+GraphQL allows you to query related resources in a single request, eliminating the need for multiple API calls.
+
+### Querying Related Themes
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    id
+    name
+    themes {
+      id
+      type
+      sequence
+      slug
+      entries {
+        id
+        version
+        episodes
+        nsfw
+        spoiler
+      }
+    }
+  }
+}
+```
+
+### Querying Multiple Relations
+
+```graphql
+query {
+  anime(slug: "bakemonogatari") {
+    id
+    name
+    year
+    season
+    
+    # Studios that produced the anime
+    studios {
+      id
+      name
+      slug
+    }
+    
+    # Series the anime belongs to
+    series {
+      id
+      name
+      slug
+    }
+    
+    # Images associated with the anime
+    images {
+      id
+      facet
+      link
+    }
+    
+    # External resources
+    resources {
+      id
+      site
+      link
+    }
+    
+    # Themes (OPs and EDs)
+    themes {
+      id
+      type
+      sequence
+      slug
+      song {
+        id
+        title
+      }
+      entries {
+        id
+        version
+        episodes
+        videos {
+          id
+          basename
+          filename
+          resolution
+          nc
+          subbed
+          lyrics
+          uncen
+          source
+          overlap
+        }
+      }
+    }
+  }
+}
+```
+
+## Pagination Query Example
+
+Fetch a paginated list of anime:
+
+```graphql
+query {
+  animePagination(first: 10, page: 1) {
+    data {
+      id
+      name
+      slug
+      year
+      season
+    }
+    paginationInfo {
+      total
+      count
+      perPage
+      currentPage
+      lastPage
+      hasMorePages
+    }
+  }
+}
+```
+
+## Using Variables
+
+Variables make queries reusable and easier to maintain.
+
+**Query:**
+
+```graphql
+query GetAnime($slug: String!) {
+  anime(slug: $slug) {
+    id
+    name
+    year
+    season
+    themes {
+      id
+      type
+      slug
+    }
+  }
+}
+```
+
+**Variables:**
+
+```json
+{
+  "slug": "bakemonogatari"
+}
+```
+
+## Aliases
+
+Use aliases to rename fields in the response or query the same field multiple times with different arguments:
+
+```graphql
+query {
+  summer2009: animePagination(first: 5, where: [
+    { field: YEAR, value: 2009 },
+    { field: SEASON, value: "SUMMER" }
+  ]) {
+    data {
+      name
+      year
+      season
+    }
+  }
+  
+  fall2009: animePagination(first: 5, where: [
+    { field: YEAR, value: 2009 },
+    { field: SEASON, value: "FALL" }
+  ]) {
+    data {
+      name
+      year
+      season
+    }
+  }
+}
+```
+
+## Fragments
+
+Fragments allow you to reuse common field selections:
+
+```graphql
+fragment AnimeDetails on Anime {
+  id
+  name
+  slug
+  year
+  season
+  media_format
+}
+
+query {
+  anime1: anime(slug: "bakemonogatari") {
+    ...AnimeDetails
+  }
+  
+  anime2: anime(slug: "kizumonogatari") {
+    ...AnimeDetails
+  }
+}
+```
+
+## Search Query
+
+The API provides a unified search query that searches across multiple resource types:
+
+```graphql
+query {
+  search(query: "monogatari") {
+    anime {
+      id
+      name
+      slug
+    }
+    artists {
+      id
+      name
+      slug
+    }
+    series {
+      id
+      name
+      slug
+    }
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Request Only What You Need">
+    Only include fields that you'll actually use. This reduces response size and improves performance.
+  </Accordion>
+  
+  <Accordion title="Use Variables for Dynamic Queries">
+    Instead of building query strings dynamically, use GraphQL variables to pass dynamic values.
+  </Accordion>
+  
+  <Accordion title="Leverage Fragments for Reusability">
+    Define fragments for commonly used field selections to keep your queries DRY.
+  </Accordion>
+  
+  <Accordion title="Be Mindful of Query Depth">
+    The API has a maximum query depth of 13 levels. Avoid excessively nested queries.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Filtering" icon="filter" href="/graphql/filtering">
+    Learn how to filter query results
+  </Card>
+  <Card title="Sorting" icon="arrow-down-a-z" href="/graphql/sorting">
+    Sort your query results
+  </Card>
+</CardGroup>

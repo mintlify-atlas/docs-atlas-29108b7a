@@ -1,0 +1,675 @@
+---
+title: Video Type
+description: GraphQL type definition and queries for video resources
+---
+
+The `Video` type represents a WebM of an anime theme. For example, the video `Bakemonogatari-OP1.webm` represents the WebM of the Bakemonogatari OP1 theme.
+
+## Type Definition
+
+```graphql
+type Video {
+  # Identification
+  video_id: Int!
+  basename: String!
+  filename: String!
+  
+  # File Properties
+  path: String!
+  size: Int!
+  mimetype: String!
+  resolution: Int
+  
+  # Video Properties
+  source: VideoSource
+  source_localized: String
+  overlap: VideoOverlap!
+  overlap_localized: String
+  nc: Boolean!
+  subbed: Boolean!
+  lyrics: Boolean!
+  uncen: Boolean!
+  
+  # Computed
+  tags: String!
+  priority: Int!
+  link: String!
+  
+  # Timestamps
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+  
+  # Relationships
+  audio: Audio
+  animethemeentries: [AnimeThemeEntry!]!
+  tracks: [PlaylistTrack!]!
+  videoscript: VideoScript
+}
+```
+
+## Fields
+
+### video_id
+
+Unique identifier for the video.
+
+- Type: `Int!`
+- Example: `1`
+
+### basename
+
+The filename without extension.
+
+- Type: `String!`
+- Example: `"Bakemonogatari-OP1"`
+
+### filename
+
+The complete filename with extension.
+
+- Type: `String!`
+- Example: `"Bakemonogatari-OP1.webm"`
+
+### path
+
+The full storage path to the video file.
+
+- Type: `String!`
+- Example: `"/path/to/Bakemonogatari-OP1.webm"`
+
+### size
+
+File size in bytes.
+
+- Type: `Int!`
+- Example: `15728640` (15 MB)
+
+### mimetype
+
+MIME type of the video file.
+
+- Type: `String!`
+- Example: `"video/webm"`
+
+### resolution
+
+Video resolution (vertical pixels).
+
+- Type: `Int`
+- Values: `480`, `720`, `1080`, etc.
+- Example: `1080`
+
+### source
+
+The source material used for this video.
+
+- Type: `VideoSource`
+- Values: `WEB`, `RAW`, `BD`, `DVD`, `VHS`, `LD`
+- Example: `BD` (Blu-ray Disc)
+
+### overlap
+
+How the video transitions with episode content.
+
+- Type: `VideoOverlap!`
+- Values:
+  - `NONE` - Clean opening/ending sequence
+  - `TRANS` - Transitions to/from episode
+  - `OVER` - Plays over episode content
+- Example: `NONE`
+
+### nc
+
+Whether the video is creditless (no text overlays).
+
+- Type: `Boolean!`
+- Example: `true`
+
+### subbed
+
+Whether the video has hardcoded subtitles.
+
+- Type: `Boolean!`
+- Example: `false`
+
+### lyrics
+
+Whether the video has hardcoded lyrics.
+
+- Type: `Boolean!`
+- Example: `false`
+
+### uncen
+
+Whether the video is uncensored.
+
+- Type: `Boolean!`
+- Example: `true`
+
+### tags
+
+Computed tag string identifying the video variant.
+
+- Type: `String!`
+- Example: `"NCBD1080"` (creditless, Blu-ray, 1080p)
+
+The tags field combines multiple properties:
+- `NC` if creditless
+- Source (`BD`, `DVD`) if Blu-ray or DVD
+- Resolution if not 720p
+- `Subbed` or `Lyrics` if applicable
+
+### priority
+
+Computed priority score for audio extraction.
+
+- Type: `Int!`
+- Higher scores indicate better quality for audio extraction
+- Considers source, overlap, and subtitle properties
+
+### link
+
+Direct link to stream/download the video.
+
+- Type: `String!`
+- Example: `"https://animethemes.moe/video/Bakemonogatari-OP1.webm"`
+
+## Relationships
+
+### audio
+
+The extracted audio track for this video.
+
+```graphql
+{
+  video(video_id: 1) {
+    basename
+    audio {
+      audio_id
+      basename
+      size
+      link
+    }
+  }
+}
+```
+
+Returns: `Audio`
+
+### animethemeentries
+
+The theme entries this video belongs to.
+
+```graphql
+{
+  video(video_id: 1) {
+    basename
+    animethemeentries {
+      entry_id
+      version
+      animetheme {
+        slug
+        anime {
+          name
+        }
+      }
+    }
+  }
+}
+```
+
+Returns: `[AnimeThemeEntry!]!`
+
+A video can belong to multiple entries (e.g., shared across versions).
+
+### videoscript
+
+The subtitle/caption file for this video.
+
+```graphql
+{
+  video(video_id: 1) {
+    basename
+    videoscript {
+      script_id
+      path
+      link
+    }
+  }
+}
+```
+
+Returns: `VideoScript`
+
+### tracks
+
+Playlist tracks using this video.
+
+```graphql
+{
+  video(video_id: 1) {
+    basename
+    tracks {
+      track_id
+      playlist {
+        name
+      }
+    }
+  }
+}
+```
+
+Returns: `[PlaylistTrack!]!`
+
+Only returns tracks from public playlists.
+
+## Audio Type
+
+The `Audio` type represents extracted audio tracks.
+
+```graphql
+type Audio {
+  audio_id: Int!
+  basename: String!
+  filename: String!
+  path: String!
+  size: Int!
+  mimetype: String!
+  link: String!
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+  videos: [Video!]!
+}
+```
+
+## VideoScript Type
+
+The `VideoScript` type represents subtitle files.
+
+```graphql
+type VideoScript {
+  script_id: Int!
+  path: String!
+  link: String!
+  video: Video!
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+}
+```
+
+## Queries
+
+### Single Video
+
+Query a single video by ID.
+
+```graphql
+query GetVideo($id: Int!) {
+  video(video_id: $id) {
+    video_id
+    basename
+    filename
+    resolution
+    source
+    nc
+    tags
+    link
+    animethemeentries {
+      animetheme {
+        slug
+        anime {
+          name
+        }
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "id": 1
+}
+```
+
+### Video Pagination
+
+Query multiple videos with filtering.
+
+```graphql
+query ListVideos($page: Int, $first: Int, $resolution: Int) {
+  videoPagination(
+    page: $page
+    first: $first
+    filter: { resolution: { eq: $resolution } }
+    sort: [{ column: BASENAME, direction: ASC }]
+  ) {
+    data {
+      video_id
+      basename
+      resolution
+      source
+      tags
+      link
+    }
+    pagination {
+      total
+      current_page
+      has_more_pages
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "page": 1,
+  "first": 25,
+  "resolution": 1080
+}
+```
+
+### Videos for Anime
+
+Query all videos for a specific anime.
+
+```graphql
+query AnimeVideos($animeId: Int!) {
+  anime(anime_id: $animeId) {
+    name
+    animethemes {
+      slug
+      type
+      animethemeentries {
+        version
+        episodes
+        videos {
+          basename
+          resolution
+          source
+          nc
+          tags
+          link
+        }
+      }
+    }
+  }
+}
+```
+
+### Filter by Source and Quality
+
+```graphql
+query HighQualityVideos($source: VideoSource!, $minRes: Int!) {
+  videoPagination(
+    filter: {
+      source: { eq: $source }
+      resolution: { gte: $minRes }
+      nc: { eq: true }
+    }
+    sort: [{ column: RESOLUTION, direction: DESC }]
+    first: 50
+  ) {
+    data {
+      basename
+      resolution
+      source
+      size
+      link
+      animethemeentries {
+        animetheme {
+          anime {
+            name
+          }
+          slug
+        }
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "source": "BD",
+  "minRes": 1080
+}
+```
+
+### Video with Audio and Script
+
+```graphql
+query VideoWithAssets($id: Int!) {
+  video(video_id: $id) {
+    basename
+    resolution
+    source
+    link
+    audio {
+      basename
+      link
+      size
+    }
+    videoscript {
+      path
+      link
+    }
+  }
+}
+```
+
+### Videos by Overlap Type
+
+```graphql
+query VideosByOverlap($overlap: VideoOverlap!) {
+  videoPagination(
+    filter: { overlap: { eq: $overlap } }
+    first: 25
+  ) {
+    data {
+      basename
+      overlap
+      overlap_localized
+      animethemeentries {
+        animetheme {
+          anime {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Variables:
+```json
+{
+  "overlap": "NONE"
+}
+```
+
+## Example Responses
+
+### Basic Video Query
+
+```json
+{
+  "data": {
+    "video": {
+      "video_id": 1,
+      "basename": "Bakemonogatari-OP1",
+      "filename": "Bakemonogatari-OP1.webm",
+      "resolution": 1080,
+      "source": "BD",
+      "nc": true,
+      "tags": "NCBD1080",
+      "link": "https://animethemes.moe/video/Bakemonogatari-OP1.webm"
+    }
+  }
+}
+```
+
+### Video with Theme Context
+
+```json
+{
+  "data": {
+    "video": {
+      "basename": "Bakemonogatari-OP1",
+      "resolution": 1080,
+      "source": "BD",
+      "animethemeentries": [
+        {
+          "animetheme": {
+            "slug": "OP1",
+            "anime": {
+              "name": "Bakemonogatari"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+## Filterable Columns
+
+- `video_id`
+- `basename`
+- `filename`
+- `path`
+- `size`
+- `mimetype`
+- `resolution`
+- `source`
+- `overlap`
+- `nc`
+- `subbed`
+- `lyrics`
+- `uncen`
+- `created_at`
+- `updated_at`
+- `deleted_at`
+
+## Sortable Columns
+
+- `VIDEO_ID`
+- `BASENAME`
+- `FILENAME`
+- `SIZE`
+- `RESOLUTION`
+- `CREATED_AT`
+- `UPDATED_AT`
+
+## Use Cases
+
+### Find Best Quality Video
+
+```graphql
+query BestQualityVideo($animeId: Int!, $themeSlug: String!) {
+  anime(anime_id: $animeId) {
+    animethemes(filter: { slug: { eq: $themeSlug } }) {
+      animethemeentries {
+        videos(
+          filter: { 
+            nc: { eq: true }
+            source: { eq: BD }
+          }
+          sort: [{ column: RESOLUTION, direction: DESC }]
+        ) {
+          basename
+          resolution
+          link
+        }
+      }
+    }
+  }
+}
+```
+
+### Video Download Links
+
+```graphql
+query DownloadableVideos($animeId: Int!) {
+  anime(anime_id: $animeId) {
+    name
+    animethemes {
+      slug
+      animethemeentries {
+        videos {
+          basename
+          resolution
+          size
+          tags
+          link
+        }
+      }
+    }
+  }
+}
+```
+
+### Audio Extraction Candidates
+
+Videos with highest priority for audio extraction:
+
+```graphql
+query AudioExtractionCandidates($first: Int!) {
+  videoPagination(
+    filter: { 
+      audio: { exists: false }
+      nc: { eq: true }
+    }
+    sort: [{ column: PRIORITY, direction: DESC }]
+    first: $first
+  ) {
+    data {
+      basename
+      priority
+      source
+      overlap
+      resolution
+    }
+  }
+}
+```
+
+## AnimeThemeEntry Type
+
+Videos are associated with anime through theme entries.
+
+```graphql
+type AnimeThemeEntry {
+  entry_id: Int!
+  version: Int
+  episodes: String
+  nsfw: Boolean!
+  spoiler: Boolean!
+  animetheme: AnimeTheme!
+  videos: [Video!]!
+  created_at: String!
+  updated_at: String!
+  deleted_at: String
+}
+```
+
+- `version` - Entry variant number
+- `episodes` - Episode range (e.g., "1-12", "13+")
+- `nsfw` - Not safe for work flag
+- `spoiler` - Spoiler content flag
+
+## Related Types
+
+- [Audio](/graphql/schema/types#audio) - Audio tracks
+- [VideoScript](/graphql/schema/types#videoscript) - Subtitle files
+- [AnimeThemeEntry](/graphql/schema/anime#animethemeentry) - Theme entries
+- [AnimeTheme](/graphql/schema/anime#animetheme) - Theme sequences
+- [Anime](/graphql/schema/anime) - Anime productions

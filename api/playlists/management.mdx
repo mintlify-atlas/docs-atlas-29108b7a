@@ -1,0 +1,369 @@
+---
+title: Playlist Management
+description: Creating, updating, and deleting playlists
+---
+
+## Introduction
+
+Playlist management endpoints allow authenticated users to create, update, and delete their own playlists. All management operations require authentication and appropriate permissions.
+
+## Authentication Requirements
+
+To perform playlist management operations, you must:
+
+1. Be authenticated with a valid user account
+2. Have the `AllowPlaylistManagement` feature enabled for your account
+3. Be the owner of the playlist (for update and delete operations)
+
+Include your authentication token in the request header:
+
+```http
+Authorization: Bearer YOUR_TOKEN
+```
+
+## Create Playlist
+
+```http
+POST /api/playlist
+```
+
+Creates a new playlist owned by the authenticated user.
+
+**Request Body:**
+
+```json
+{
+  "name": "My Favorite OPs",
+  "description": "A collection of my all-time favorite opening themes",
+  "visibility": 0
+}
+```
+
+**Fields:**
+
+- `name` (required) - Playlist name (string)
+- `description` (optional) - Playlist description (string)
+- `visibility` (required) - Visibility setting (integer: 0=Public, 1=Private, 2=Unlisted)
+
+**Example Request:**
+
+```bash
+curl -X POST https://api.animethemes.moe/api/playlist \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Best of 2023",
+    "description": "Top anime openings and endings from 2023",
+    "visibility": 0
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "playlist": {
+    "id": "Zk8OvY3e",
+    "name": "Best of 2023",
+    "description": "Top anime openings and endings from 2023",
+    "visibility": 0,
+    "user_id": 123,
+    "first_id": null,
+    "last_id": null,
+    "created_at": "2024-01-15T10:30:00.000000Z",
+    "updated_at": "2024-01-15T10:30:00.000000Z"
+  }
+}
+```
+
+### Playlist Limits
+
+The system enforces a limit on the number of playlists a user can create. This is validated by the `UserExceedsPlaylistLimit` middleware. If you've reached your limit, you'll receive an error response:
+
+```json
+{
+  "error": "User has exceeded the playlist limit"
+}
+```
+
+## Update Playlist
+
+```http
+PUT /api/playlist/{playlist}
+PATCH /api/playlist/{playlist}
+```
+
+Updates an existing playlist. Only the playlist owner can update their playlist.
+
+**Parameters:**
+
+- `{playlist}` - Playlist hashid
+
+**Request Body:**
+
+```json
+{
+  "name": "Updated Playlist Name",
+  "description": "Updated description",
+  "visibility": 1
+}
+```
+
+**Fields:**
+
+All fields are optional. Only include the fields you want to update:
+
+- `name` - Update the playlist name
+- `description` - Update the playlist description
+- `visibility` - Change visibility (0=Public, 1=Private, 2=Unlisted)
+
+**Example - Change to Private:**
+
+```bash
+curl -X PATCH https://api.animethemes.moe/api/playlist/Zk8OvY3e \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "visibility": 1
+  }'
+```
+
+**Example - Update Name and Description:**
+
+```bash
+curl -X PATCH https://api.animethemes.moe/api/playlist/Zk8OvY3e \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Winter 2024 Favorites",
+    "description": "My favorite themes from the Winter 2024 season"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "playlist": {
+    "id": "Zk8OvY3e",
+    "name": "Winter 2024 Favorites",
+    "description": "My favorite themes from the Winter 2024 season",
+    "visibility": 1,
+    "user_id": 123,
+    "first_id": 456,
+    "last_id": 789,
+    "created_at": "2024-01-15T10:30:00.000000Z",
+    "updated_at": "2024-03-20T14:15:00.000000Z"
+  }
+}
+```
+
+## Delete Playlist
+
+```http
+DELETE /api/playlist/{playlist}
+```
+
+Permanently deletes a playlist and all its tracks. Only the playlist owner can delete their playlist. This action cannot be undone.
+
+**Parameters:**
+
+- `{playlist}` - Playlist hashid
+
+**Example:**
+
+```bash
+curl -X DELETE https://api.animethemes.moe/api/playlist/Zk8OvY3e \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "message": "Playlist deleted successfully"
+}
+```
+
+**Important Notes:**
+
+- Deletion is permanent and uses `forceDelete` (not soft delete)
+- All tracks associated with the playlist are also deleted
+- Associated playlist images are removed
+- This action triggers a `PlaylistDeleted` event
+
+## Visibility Settings
+
+### Public Playlists (visibility: 0)
+
+- Visible to all users
+- Included in playlist search results
+- Appear in public playlist listings
+- Indexed for search functionality
+
+**Use Case:** Share your curated playlists with the community.
+
+### Private Playlists (visibility: 1)
+
+- Only visible to the playlist owner
+- Not searchable or discoverable by other users
+- Only accessible when authenticated as the owner
+
+**Use Case:** Personal playlists you don't want to share.
+
+### Unlisted Playlists (visibility: 2)
+
+- Accessible via direct link (hashid)
+- Not included in public listings or search results
+- Anyone with the link can view the playlist
+
+**Use Case:** Share playlists with specific people without making them fully public.
+
+**Example - Creating an Unlisted Playlist:**
+
+```bash
+curl -X POST https://api.animethemes.moe/api/playlist \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Shared with Friends",
+    "description": "Semi-private playlist for my friends",
+    "visibility": 2
+  }'
+```
+
+## User Playlists
+
+### Get My Playlists
+
+```http
+GET /api/me/playlist
+```
+
+Retrieves all playlists owned by the authenticated user, regardless of visibility setting. Requires authentication.
+
+**Example:**
+
+```bash
+curl https://api.animethemes.moe/api/me/playlist \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "playlists": [
+    {
+      "id": "Zk8OvY3e",
+      "name": "Best of 2023",
+      "visibility": 0,
+      "created_at": "2023-01-15T10:30:00.000000Z"
+    },
+    {
+      "id": "Xm7Tn9Qp",
+      "name": "Private Collection",
+      "visibility": 1,
+      "created_at": "2023-06-20T14:45:00.000000Z"
+    }
+  ]
+}
+```
+
+This endpoint shows all playlists you own, including private and unlisted ones.
+
+## Events
+
+Playlist management operations trigger the following events:
+
+- **PlaylistCreated** - Fired when a new playlist is created
+- **PlaylistUpdated** - Fired when a playlist is updated
+- **PlaylistDeleted** - Fired when a playlist is deleted
+
+These events can be used for notifications, analytics, or other application logic.
+
+## Authorization Checks
+
+The API performs the following authorization checks:
+
+1. **Feature Flag**: The `AllowPlaylistManagement` feature must be enabled
+2. **Ownership**: Users can only modify playlists they own
+3. **Limits**: Users cannot exceed the maximum number of playlists
+
+If any check fails, you'll receive a `403 Forbidden` or appropriate error response.
+
+## Best Practices
+
+### Naming Playlists
+
+- Use descriptive, meaningful names
+- Consider including the theme (e.g., "Action OPs", "Romantic EDs")
+- Avoid special characters that may cause issues
+
+### Descriptions
+
+- Provide context about what the playlist contains
+- Mention any specific criteria or theme
+- Keep descriptions concise but informative
+
+### Visibility Management
+
+- Start with unlisted (2) if you're unsure about sharing
+- Use private (1) for personal work-in-progress playlists
+- Switch to public (0) when ready to share with the community
+
+### Before Deleting
+
+- Consider changing to private instead of deleting
+- Remember that deletion is permanent
+- Export track information if you might want to recreate the playlist later
+
+## Error Responses
+
+### 401 Unauthorized
+
+You're not authenticated. Include a valid bearer token.
+
+```json
+{
+  "message": "Unauthenticated"
+}
+```
+
+### 403 Forbidden
+
+You don't have permission to perform this action (not the owner or feature disabled).
+
+```json
+{
+  "message": "This action is unauthorized"
+}
+```
+
+### 404 Not Found
+
+The playlist doesn't exist or you don't have access to it.
+
+```json
+{
+  "message": "No query results for model [Playlist]"
+}
+```
+
+### 422 Unprocessable Entity
+
+Validation failed on your request data.
+
+```json
+{
+  "message": "The name field is required",
+  "errors": {
+    "name": ["The name field is required"]
+  }
+}
+```
+
+## Related Resources
+
+- [Playlist Overview](/api/playlists/overview) - Understanding playlist structure and main endpoints
+- [Playlist Track Management](/api/playlists/tracks) - Managing tracks within playlists

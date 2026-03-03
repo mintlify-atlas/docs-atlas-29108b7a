@@ -1,0 +1,266 @@
+---
+title: Contributing Guidelines
+description: Guidelines for contributing to AnimeThemes Server development
+---
+
+## Getting Started
+
+Thank you for your interest in contributing to AnimeThemes Server! This guide will help you set up your development environment and understand our contribution workflow.
+
+For questions and support, join the [Discord Server](https://discordapp.com/invite/m9zbVyQ) and use the #api channel.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **PHP 8.5** or higher
+- **MySQL 8+**
+- **Composer** for dependency management
+- **Web Server**: [Laravel Herd](https://herd.laravel.com/), Apache, or Nginx
+
+### Required PHP Extensions
+
+Enable these extensions in your `php.ini`:
+
+- `fileinfo` - Detects MIME types during seeding
+- `gd` - Fakes image files for testing
+- `pdo_mysql` - MySQL database connectivity
+- `ext-intl` - Internationalization support
+
+### PHP Configuration
+
+For video upload support, adjust these `php.ini` settings:
+
+```ini
+post_max_size = 200M
+upload_max_filesize = 200M
+```
+
+## Development Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone git@github.com:AnimeThemes/animethemes-server.git
+cd animethemes-server
+```
+
+### 2. Create Database
+
+```bash
+mysql -h localhost -u root -p -e "CREATE DATABASE IF NOT EXISTS \`animethemes\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+### 3. Install Dependencies
+
+```bash
+composer setup
+```
+
+This command will:
+- Install Composer dependencies
+- Copy `.env.example` to `.env`
+- Generate application key
+- Run database migrations
+- Execute seeders and import dumps
+- Optimize the application
+
+### 4. Configure Web Server
+
+#### Using Laravel Herd
+
+```bash
+herd link animethemes.test
+```
+
+#### Using Apache/Nginx
+
+Configure your web server to point to the `public` directory.
+
+### 5. Verify Installation
+
+Visit `http://animethemes.test` (or your configured server name). If successful, the application should be running.
+
+## Development Workflow
+
+### Creating Users
+
+Use Laravel Tinker to create test users:
+
+```bash
+php artisan tinker
+```
+
+```php
+// Create a basic user
+$user = User::factory()->create([
+    'name' => 'User Name',
+    'email' => 'example@example.com',
+    'password' => 'password',
+    'email_verified_at' => now()
+]);
+
+// Assign Admin role for full permissions
+$user->assignRole('Admin');
+```
+
+### Feature Flags
+
+Features requiring external services are disabled by default. Enable them via database configuration:
+
+```bash
+# Example: Enable video streams
+# Set App\Features\AllowVideoStreams to true in the database
+```
+
+### Local Storage Configuration
+
+For local development, configure filesystem disks in `.env`:
+
+```env
+AUDIO_DISK_DEFAULT=audios_local
+AUDIO_DISKS=audios_local
+VIDEO_DISK_DEFAULT=videos_local
+VIDEO_DISKS=videos_local
+IMAGE_DISK=images_local
+SCRIPT_DISK=scripts_local
+DUMP_DISK=dumps_local
+```
+
+Optionally specify custom storage paths:
+
+```env
+AUDIO_DISK_ROOT="E:\\animethemes-audios\\"
+VIDEO_DISK_ROOT="E:\\animethemes-videos\\"
+IMAGE_DISK_ROOT="E:\\animethemes-images\\"
+SCRIPT_DISK_ROOT="E:\\animethemes-scripts\\"
+DUMP_DISK_ROOT="E:\\animethemes-db-dumps\\"
+```
+
+Create symbolic links:
+
+```bash
+php artisan storage:link
+```
+
+### Elasticsearch (Optional)
+
+To enable Scout search functionality:
+
+```bash
+# Run elastic migrations
+php artisan elastic:migrate
+
+# Import models
+php artisan db:seed --class="Database\Seeders\Scout\ImportModelsSeeder"
+```
+
+Configure in `.env`:
+
+```env
+SCOUT_DRIVER=elastic
+ELASTIC_HOST=http://localhost:9200
+```
+
+## Code Standards
+
+### Code Style
+
+The project uses **Laravel Pint** for code styling, following Laravel conventions with custom rules defined in `pint.json`.
+
+Key standards:
+- **Strict types**: All PHP files must declare `declare(strict_types=1);`
+- **Array syntax**: Use short array syntax `[]`
+- **Imports**: Alphabetically ordered, no unused imports
+- **Spacing**: Follow PSR-12 standards
+- **Method casing**: Use camelCase for test methods
+
+### Running Code Style Checks
+
+```bash
+# Fix code style automatically
+composer lint
+
+# Check code style without making changes
+composer test:lint
+```
+
+This runs:
+- **Pint**: Code formatting
+- **Rector**: Automated refactoring
+
+### Static Analysis
+
+Run PHPStan for type checking:
+
+```bash
+composer test:types
+```
+
+Configuration is defined in `phpstan.neon`.
+
+### StyleCI
+
+The project uses [StyleCI](https://github.styleci.io/repos/111264405) for automated code style verification on pull requests.
+
+## Code of Conduct
+
+All contributors must follow the [Contributor Covenant Code of Conduct](https://github.com/AnimeThemes/animethemes-server/blob/main/CODE_OF_CONDUCT.md).
+
+### Our Standards
+
+- Use welcoming and inclusive language
+- Be respectful of differing viewpoints
+- Accept constructive criticism gracefully
+- Focus on what's best for the community
+- Show empathy toward other contributors
+
+### Reporting Issues
+
+Report unacceptable behavior to admin@animethemes.moe.
+
+## Submitting Changes
+
+### Before Submitting
+
+1. Ensure all tests pass
+2. Run code style checks
+3. Add tests for new functionality
+4. Update documentation as needed
+
+### Pull Request Process
+
+1. Create a feature branch from `main`
+2. Make your changes following code standards
+3. Commit with clear, descriptive messages
+4. Push to your fork
+5. Open a pull request with a clear description
+
+### Commit Messages
+
+Write clear, concise commit messages that explain the "why" not just the "what":
+
+```bash
+# Good
+git commit -m "Add video validation to prevent corrupted uploads"
+
+# Less helpful
+git commit -m "Update video code"
+```
+
+## Testing
+
+See the [Testing Guide](/advanced/testing) for detailed information on writing and running tests.
+
+## Resources
+
+- **GitHub Repository**: https://github.com/AnimeThemes/animethemes-server
+- **Discord**: https://discordapp.com/invite/m9zbVyQ
+- **Website**: https://animethemes.moe
+- **API Documentation**: https://api-docs.animethemes.moe
+
+## Getting Help
+
+- **Discord #api channel**: Best for real-time questions
+- **GitHub Issues**: For bug reports and feature requests
+- **Email**: admin@animethemes.moe for sensitive matters
